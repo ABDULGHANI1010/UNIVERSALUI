@@ -184,6 +184,8 @@ local PROPERTIES = {
            -- {Name = "HideKeybind",   Type = "Keybind",  LayoutOrder = 12, Data = {"Hide UI Keybind", "RightShift"}},
             {Name = "Notifications", Type = "Bool",     LayoutOrder = 13, Data = {"Notifications", true}},
             {Name = "AutoExecute",   Type = "Bool",     LayoutOrder = 14, Data = {"Auto Execute", true}},
+            
+           
         }    
     };
     ["Player"]   = {LayoutOrder = 2, Divider = true, Image = "rbxassetid://88931379871493",
@@ -227,6 +229,21 @@ local PROPERTIES = {
             {Name = 'Sit'                           ,Type = 'Button',   LayoutOrder = 24, Data = {"Sit"}},
             {Name = 'Trip'                          ,Type = 'Button',   LayoutOrder = 25, Data = {"Trip"}},
             {Name = 'FreezeToggled'                 ,Type = 'Bool',     LayoutOrder = 26, Data = {"Freeze Character Toggled", false}},
+            {Name = "GodToggled"                    ,Type = "Bool",     LayoutOrder = 27, Data = {"God Mode", false} },
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 28, Data = {16}},
+            
+            --// Void
+            { Name = "AntiVoidToggled"              ,Type = "Bool",     LayoutOrder = 29, Data = {"Anti-Void", false} },
+            { Name = "AntiVoidThreshold"            ,Type = "Slider",   LayoutOrder = 30, Data = {"Void Threshold", -100, -500, 0, 10} },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 31, Data = {16}},
+            
+            { Name = "NoFrictionToggled"            ,Type = "Bool",     LayoutOrder = 32, Data = {"Less Friction (near 0 friction)", false} },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 33, Data = {16}},
+            
+            { Name = "SpectateToggled"              ,Type = "Bool",     LayoutOrder = 34, Data = {"Spectate", false}              },
+            { Name = "SpectateTarget"               ,Type = "Textbox",  LayoutOrder = 35, Data = {"Spectate Target", "@closest"}  },
+            { Name = "SpectateNext"                 ,Type = "Button",   LayoutOrder = 36, Data = {"Next Player"}                  },
+            { Name = "SpectatePrev"                 ,Type = "Button",   LayoutOrder = 37, Data = {"Previous Player"}              },
         }
     };
     ["Combat"]   = {LayoutOrder = 3, Divider = true, Image = "rbxassetid://80768163828428",
@@ -1255,6 +1272,8 @@ local humanoid : Humanoid
 local rootPart : BasePart
 local camera = WorkspaceService.CurrentCamera :: Camera
 
+local ignoringCharacterAdded = false -- prevents re-entry on CharacterAdded (god-mode guard)
+
 ---- Helper Funcs ----
 local notify = function(text, duration)
     if not getValue("Notifications") then
@@ -1368,52 +1387,102 @@ local function stringToPlayers(str)
     return {}
 end
 
----- Walk speed and Jump Height ----
+-- // Feature Base Class
+local Features = {}
+
+local Feature = {}
+Feature.__index = Feature
+
+function Feature.new(name)
+    local self = setmetatable({}, Feature)
+    self.name = name
+    self.connections = {}
+    return self
+end
+
+function Feature:connect(signal, fn)
+    local conn = signal:Connect(fn)
+    table.insert(self.connections, conn)
+    return conn
+end
+
+function Feature:cleanup()
+    for _, conn in ipairs(self.connections) do
+        pcall(conn.Disconnect, conn)
+    end
+    table.clear(self.connections)
+    if self.onCleanup then self:onCleanup() end
+end
+
+function Feature:enable()
+    if self.onEnable then self:onEnable() end
+end
+
+function Feature:disable()
+    self:cleanup()
+    if self.onDisable then self:onDisable() end
+end
+
+function Feature:toggle(bool)
+    if bool then self:enable() else self:disable() end
+end
+
+local function registerFeature(name)
+    local feature = Feature.new(name)
+    Features[name] = feature
+    return feature
+end
+
+local function getFeature(name)
+    return Features[name]
+end
+
+-- // Walk Speed
+local WalkSpeedFeature = registerFeature("WalkSpeed")
 local baseWalkSpeed = 16
+
+function WalkSpeedFeature:apply()
+    if not humanoid then return end
+    humanoid.WalkSpeed = getValue("WalkSpeedToggled") and getValue("WalkSpeed") or baseWalkSpeed
+end
+
+function WalkSpeedFeature:onEnable()
+    self:apply()
+end
+
+function WalkSpeedFeature:onDisable()
+    self:apply()
+end
+
+-- // Jump Height
+local JumpHeightFeature = registerFeature("JumpHeight")
 local baseJumpHeight = 7.2
 
-local wsConn, jhConn -- property connections
-
-local function setWalkSpeed()
-    if humanoid then
-        humanoid.WalkSpeed = getValue("WalkSpeedToggled") and getValue("WalkSpeed") or baseWalkSpeed
-    end
-end
-
-local function setJumpHeight()
-    if humanoid then
-        humanoid.UseJumpPower = false
-        humanoid.JumpHeight = getValue("JumpHeightToggled") and getValue("JumpHeight") or baseJumpHeight
-    end
-end
-
----- Flight ----
-local flyConnection = nil :: RBXScriptConnection
-local isFlying = false
-local bodyVelocity
-local bodyGyro
-local function toggleFlying()
-    if not getValue("FlightToggled") then
-        -- necessary flight cleanup
-        if isFlying then
-            isFlying = false
-            if flyConnection then flyConnection:Disconnect() end
-            if bodyVelocity then bodyVelocity:Destroy() end
-            if bodyGyro then bodyGyro:Destroy() end
-            if humanoid then humanoid.PlatformStand = false end
-        end
-        return
-    end
-    
-    if not rootPart then return end
+function JumpHeightFeature:apply()
     if not humanoid then return end
-    if isFlying then return end
-    isFlying = true
+    humanoid.UseJumpPower = false
+    humanoid.JumpHeight = getValue("JumpHeightToggled") and getValue("JumpHeight") or baseJumpHeight
+end
+
+function JumpHeightFeature:onEnable()
+    self:apply()
+end
+
+function JumpHeightFeature:onDisable()
+    self:apply()
+end
+
+-- // Fly
+local FlyFeature = registerFeature("Fly")
+local bodyVelocity, bodyGyro
+
+function FlyFeature:onEnable()
+    if not rootPart or not humanoid then return end
     humanoid.PlatformStand = true
     
     bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.Velocity = Vector3.zero
     bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.zero
     bodyVelocity.Name = uniqueIdentifier
     bodyVelocity.Parent = rootPart
     
@@ -1423,195 +1492,178 @@ local function toggleFlying()
     bodyGyro.Name = uniqueIdentifier
     bodyGyro.Parent = rootPart
     
-    flyConnection = RunService.RenderStepped:Connect(function()
-        -- Move direction including Q and E for vertical movement
-        local moveDirection = humanoid.MoveDirection + Vector3.new(0, 
-            (UserInputService:IsKeyDown(Enum.KeyCode.E) and 1 or 0) +
-                (UserInputService:IsKeyDown(Enum.KeyCode.Q) and -1 or 0),
-            0)
+    self:connect(RunService.RenderStepped, function()
+        local up = (UserInputService:IsKeyDown(Enum.KeyCode.E) and 1 or 0)
+        - (UserInputService:IsKeyDown(Enum.KeyCode.Q) and 1 or 0)
+        local move = humanoid.MoveDirection + Vector3.new(0, up, 0)
         
-        -- Convert to flat camera space
-        local flatCamCF = CFrame.new(
+        local flatCam = CFrame.new(
             camera.CFrame.Position,
             camera.CFrame.Position + Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
         )
+        local rel = (camera.CFrame * CFrame.new(flatCam:VectorToObjectSpace(move))).Position - camera.CFrame.Position
         
-        -- Convert move direction to flat camera space
-        local relativeMove = (camera.CFrame * CFrame.new(
-            flatCamCF:VectorToObjectSpace(moveDirection)
-            )).Position - camera.CFrame.Position
-        
-        -- Apply velocity
-        if relativeMove.Magnitude > 0 then
-            bodyVelocity.Velocity = relativeMove.Unit * getValue("FlightSpeed")
-        else
-            bodyVelocity.Velocity = Vector3.zero
-        end
-        
+        bodyVelocity.Velocity = rel.Magnitude > 0 and rel.Unit * getValue("FlightSpeed") or Vector3.zero
         bodyGyro.CFrame = camera.CFrame
     end)
 end
 
----- Infinite Jump ----
-local infiniteJumpConnection = nil
-local function toggleInfiniteJump()
-    if not getValue("InfJumpToggled") then 
-        -- necessary cleanup
-        if infiniteJumpConnection then infiniteJumpConnection:Disconnect() infiniteJumpConnection = nil end
-        return 
-    end
-    if infiniteJumpConnection then return end
-    
-    local jumpDebounce = false
-    infiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
-        if jumpDebounce or not humanoid then return end
-        jumpDebounce = true
-        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        task.wait()
-        jumpDebounce = false
-    end)
+function FlyFeature:onDisable()
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+    if bodyGyro     then bodyGyro:Destroy()     bodyGyro = nil end
+    if humanoid     then humanoid.PlatformStand = false end
 end
 
----- Infinite Jump ----
-local noclipConnection = nil
-local function toggleNoclip()
-    if not getValue("NoclipToggled") then 
-        -- necessary cleanup
-        if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
-        if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Landed) end
-        return 
-    end
-    if noclipConnection then return end
-    
-    noclipConnection = RunService.RenderStepped:Connect(function()
+-- // Noclip
+local NoclipFeature = registerFeature("Noclip")
+
+function NoclipFeature:onEnable()
+    self:connect(RunService.Stepped, function()
         if not character then return end
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then
-                part.CanCollide = false
+        for _, p in ipairs(character:GetDescendants()) do
+            if p:IsA("BasePart") and p.CanCollide then
+                p.CanCollide = false
             end
         end
     end)
 end
 
----- Anti AFK ----
-local idledConnection = nil
-local function toggleAntiAfk()
-    if not getValue("AntiAfkToggled") then 
-        -- necessary cleanup
-        if idledConnection then idledConnection:Disconnect() idledConnection = nil end
-        return 
-    end
-    if idledConnection then return end
-    
-    idledConnection = LocalPlayer.Idled:Connect(function()
+function NoclipFeature:onDisable()
+    if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Landed) end
+end
+
+-- // Infinite Jump
+local InfJumpFeature = registerFeature("InfJump")
+
+function InfJumpFeature:onEnable()
+    local debounce = false
+    self:connect(UserInputService.JumpRequest, function()
+        if debounce or not humanoid then return end
+        debounce = true
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        task.wait()
+        debounce = false
+    end)
+end
+
+-- // Anti AFK
+local AntiAfkFeature = registerFeature("AntiAfk")
+
+function AntiAfkFeature:onEnable()
+    self:connect(LocalPlayer.Idled, function()
         Services.VirtualUser:CaptureController()
         Services.VirtualUser:ClickButton2(Vector2.new())
     end)
 end
 
----- Teleport ----
-local function teleport()
+-- // Freeze
+local FreezeFeature = registerFeature("Freeze")
+
+function FreezeFeature:onEnable()
+    if not character then return end
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part:SetAttribute(uniqueIdentifier, part.Anchored)
+            part.Anchored = true
+        end
+    end
+end
+
+function FreezeFeature:onDisable()
+    if not character then return end
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = part:GetAttribute(uniqueIdentifier) or false
+        end
+    end
+end
+
+-- // Teleport to Position
+local TeleportFeature = registerFeature("Teleport")
+
+function TeleportFeature:execute()
     if not rootPart or not character then return end
     local position = stringToVector3(getValue("TeleportPosition"))
-    
-    if position then
-        rootPart.CFrame = CFrame.new(position)
-    end
+    if position then rootPart.CFrame = CFrame.new(position) end
 end
 
-local loopedTeleportConnection = nil
-local teleportTween = nil
-local pulseTeleportTask = nil
-local function cleanupTeleport()
-    if teleportTween then
-        teleportTween:Cancel()
-        teleportTween = nil
-    end
-    if loopedTeleportConnection then
-        loopedTeleportConnection:Disconnect()
-        loopedTeleportConnection = nil
-    end
-    if pulseTeleportTask then
-        task.cancel(pulseTeleportTask)
-        pulseTeleportTask = nil
-    end
+-- // Teleport to Player
+local TeleportToPlayerFeature = registerFeature("TeleportToPlayer")
+TeleportToPlayerFeature.tween = nil
+TeleportToPlayerFeature.pulseTask = nil
+
+function TeleportToPlayerFeature:onCleanup()
+    if self.tween     then self.tween:Cancel() self.tween = nil end
+    if self.pulseTask then task.cancel(self.pulseTask) self.pulseTask = nil end
 end
 
-local function getTeleportOffset()
+function TeleportToPlayerFeature:getOffset()
     return stringToVector3(getValue("TeleportToPlayerOffset")) or Vector3.zero
 end
 
-local function teleportToPlayer()
-    cleanupTeleport()
-    
-    local teleportType = getValue("TeleportToPlayerType")
-    
-    -- // Pulse — teleport to each player one by one with a delay
-    if teleportType == "Pulse" then
-        local pulseDuration = tonumber(getValue("TeleportToPlayerPulseDuration")) or 1
-        pulseTeleportTask = task.spawn(function()
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player == LocalPlayer then continue end
-                local root = player.Character and getRootFromChar(player.Character)
-                if not root then continue end
-                
-                if humanoid.SeatPart then
-                    humanoid.Sit = false
-                end
-                
-                rootPart.CFrame = root.CFrame + getTeleportOffset()
-                task.wait(pulseDuration)
-            end
-        end)
-        return
-    end
-    
-    -- // Instant and Tween — one shot teleport
-    local players = stringToPlayers(getValue("TeleportPlayerName"))
-    for _, player in ipairs(players) do
+function TeleportToPlayerFeature:getTargets()
+    return stringToPlayers(getValue("TeleportPlayerName"))
+end
+
+function TeleportToPlayerFeature:doInstant()
+    for _, player in ipairs(self:getTargets()) do
         if player == LocalPlayer then continue end
-        
         local root = player.Character and getRootFromChar(player.Character)
         if not root then continue end
-        
-        if teleportType == "Instant" then
-            rootPart.CFrame = root.CFrame + getTeleportOffset()
-            
-        elseif teleportType == "Tween" then
-            local tweenDuration = tonumber(getValue("TeleportToPlayerTweenDuration")) or 1
-            teleportTween = TweenService:Create(
-                rootPart,
-                TweenInfo.new(tweenDuration, Enum.EasingStyle.Linear),
-                { CFrame = root.CFrame + getTeleportOffset() }
-            )
-            teleportTween:Play()
-        end
-        
+        rootPart.CFrame = root.CFrame + self:getOffset()
         break
     end
 end
 
-local function toggleLoopTeleport()
-    -- // Loop — continuously teleport to player every frame
-    cleanupTeleport()
-    if getValue("TeleportToPlayerLooped") then
-        loopedTeleportConnection = RunService.Heartbeat:Connect(function()
-            if not rootPart then
-                cleanupTeleport()
-                return
-            end
-            
-            local players = stringToPlayers(getValue("TeleportPlayerName"))
-            for _, player in ipairs(players) do
-                if player == LocalPlayer then continue end
-                local root = player.Character and getRootFromChar(player.Character)
-                if not root then continue end
-                rootPart.CFrame = root.CFrame + getTeleportOffset()
-                break
-            end
-        end)
+function TeleportToPlayerFeature:doTween()
+    local dur = tonumber(getValue("TeleportToPlayerTweenDuration")) or 1
+    for _, player in ipairs(self:getTargets()) do
+        if player == LocalPlayer then continue end
+        local root = player.Character and getRootFromChar(player.Character)
+        if not root then continue end
+        self.tween = TweenService:Create(
+            rootPart,
+            TweenInfo.new(dur, Enum.EasingStyle.Linear),
+            { CFrame = root.CFrame + self:getOffset() }
+        )
+        self.tween:Play()
+        break
     end
 end
+
+function TeleportToPlayerFeature:doPulse()
+    local dur = tonumber(getValue("TeleportToPlayerPulseDuration")) or 1
+    self.pulseTask = task.spawn(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player == LocalPlayer then continue end
+            local root = player.Character and getRootFromChar(player.Character)
+            if not root then continue end
+            if humanoid and humanoid.SeatPart then humanoid.Sit = false end
+            rootPart.CFrame = root.CFrame + self:getOffset()
+            task.wait(dur)
+        end
+    end)
+end
+
+function TeleportToPlayerFeature:doLoop()
+    self:connect(RunService.Heartbeat, function()
+        if not rootPart then self:cleanup() return end
+        for _, player in ipairs(self:getTargets()) do
+            if player == LocalPlayer then continue end
+            local root = player.Character and getRootFromChar(player.Character)
+            if not root then continue end
+            rootPart.CFrame = root.CFrame + self:getOffset()
+            break
+        end
+    end)
+end
+
+local TELEPORT_MODES = {
+    Instant = "doInstant",
+    Tween   = "doTween",
+    Pulse   = "doPulse",
+    Loop    = "doLoop",
+}
 
 local TELEPORT_VISIBILITY = {
     Instant = { TeleportToPlayerTweenDuration = false, TeleportToPlayerPulseDuration = false, TeleportToPlayerLooped = false, TeleportPlayerName = true,  TeleportToPlayer = true  },
@@ -1620,48 +1672,342 @@ local TELEPORT_VISIBILITY = {
     Loop    = { TeleportToPlayerTweenDuration = false, TeleportToPlayerPulseDuration = false, TeleportToPlayerLooped = true,  TeleportPlayerName = true,  TeleportToPlayer = false },
 }
 
-local function teleportToPlayerTypeValueChanged()
-    cleanupTeleport()
+function TeleportToPlayerFeature:execute()
+    self:cleanup()
+    if not rootPart then return end
+    local mode = getValue("TeleportToPlayerType")
+    local method = TELEPORT_MODES[mode]
+    if method then self[method](self) end
+end
+
+function TeleportToPlayerFeature:updateVisibility()
+    self:cleanup()
     local vis = TELEPORT_VISIBILITY[getValue("TeleportToPlayerType")]
     if not vis then return end
     for name, visible in pairs(vis) do
         setValueVisible("Player", name, visible)
     end
-end
-
----- Freeze ----
-local function toggleFreeze()
-    if not character then return end
-    
-    for _, part in character:GetDescendants() do
-        if part:IsA("BasePart") then
-            if getValue("FreezeToggled") then
-                part:SetAttribute(uniqueIdentifier, part.Anchored)
-                part.Anchored = true
-            else
-                part.Anchored = part:GetAttribute(uniqueIdentifier) or false
-            end
-        end
+    if getValue("TeleportToPlayerLooped") then
+        self:doLoop()
     end
 end
 
-local function characterAdded(char)
-    character = char
-    humanoid = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
-    rootPart = getRootFromChar(char)
+-- // Sit
+local SitFeature = registerFeature("Sit")
+
+function SitFeature:execute()
+    if not humanoid then return end
+    humanoid.Sit = not humanoid.Sit
+end
+
+-- // Trip
+local TripFeature = registerFeature("Trip")
+
+function TripFeature:execute()
+    if not humanoid or not rootPart then return end
+    if humanoid.PlatformStand then
+        humanoid.PlatformStand = false
+    else
+        rootPart:ApplyAngularImpulse(Vector3.new(250, 0, 0))
+        humanoid.PlatformStand = true
+    end
+end
+
+-- // Rejoin / Server Hop
+local ServerFeature = registerFeature("Server")
+
+function ServerFeature:rejoin()
+    TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
+end
+
+function ServerFeature:hop()
+    TeleportService:Teleport(PlaceId, LocalPlayer)
+end
+
+-- // Clipboard
+local ClipboardFeature = registerFeature("Clipboard")
+
+function ClipboardFeature:copy(text)
+    if everyClipboard then
+        everyClipboard(tostring(text))
+    end
+end
+
+-- // Auto Execute
+local AutoExecFeature = registerFeature("AutoExec")
+
+function AutoExecFeature:onEnable()
+    if not makefolder or not writefile then return end
+    if not isfolder("autoexec") then makefolder("autoexec") end
+    writefile(AUTOEXEC_PATH, ('loadstring(game:HttpGet("%s"))()'):format(SOURCE))
+end
+
+function AutoExecFeature:onDisable()
+    if isfile and isfile(AUTOEXEC_PATH) then
+        writefile(AUTOEXEC_PATH, "")
+    end
+end
+
+-- // God Mode Feature
+local GodFeature = registerFeature("God")
+
+function GodFeature:onEnable()
+    if not character or not humanoid or not rootPart then return end
     
-    -- // Disconnect old connections
+    local cam = WorkspaceService.CurrentCamera
+    local camCFrame = cam.CFrame
+    
+    if replicatesignal then
+        pcall(function()
+            replicatesignal(LocalPlayer.ConnectDiedSignalBackend)
+        end)
+    end
+    
+    local newHumanoid = humanoid:Clone()
+    newHumanoid.BreakJointsOnDeath = false
+    newHumanoid:SetStateEnabled(Enum.HumanoidStateType.Dead,        false)
+    newHumanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    newHumanoid:SetStateEnabled(Enum.HumanoidStateType.None,        false)
+    newHumanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+    newHumanoid.Parent = character
+    
+    -- // guard against reentry
+    ignoringCharacterAdded = true
+    LocalPlayer.Character = nil
+    humanoid:Destroy()
+    LocalPlayer.Character = character
+    ignoringCharacterAdded = false
+    
+    cam.CameraSubject = newHumanoid
+    task.wait()
+    cam.CFrame = camCFrame
+    
+    local animScript = character:FindFirstChild("Animate")
+    if animScript then
+        animScript.Disabled = true
+        task.wait()
+        animScript.Disabled = false
+    end
+    
+    newHumanoid.Health = newHumanoid.MaxHealth
+    humanoid = newHumanoid
+    
+    self:connect(RunService.Heartbeat, function()
+        if humanoid and humanoid.Health < humanoid.MaxHealth then
+            humanoid.Health = humanoid.MaxHealth
+        end
+    end)
+    
+    notify("You are in god mode. This is a client sided feature and will disallow you to interact with other players properly.", 5)
+end
+
+-- // Anti Void Feature
+local AntiVoidFeature = registerFeature("AntiVoid")
+local savedCFrame = nil
+local stableFrames = 0
+local STABLE_THRESHOLD = 10
+local RAYCAST_DEPTH = 50
+
+function AntiVoidFeature:onEnable()
+    self:connect(RunService.Heartbeat, function()
+        if not rootPart or not humanoid then return end
+        
+        local isGrounded = humanoid.FloorMaterial ~= Enum.Material.Air
+        
+        local rayParams = RaycastParams.new()
+        rayParams.FilterDescendantsInstances = { character }
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+        
+        local result = WorkspaceService:Raycast(
+            rootPart.Position,
+            Vector3.new(0, -RAYCAST_DEPTH, 0),
+            rayParams
+        )
+        
+        local hasGroundBelow = result ~= nil
+        
+        -- // save position only when grounded and has ground below
+        if isGrounded and hasGroundBelow then
+            stableFrames += 1
+            if stableFrames >= STABLE_THRESHOLD then
+                savedCFrame = rootPart.CFrame
+            end
+        else
+            stableFrames = 0
+        end
+        
+        -- // only rescue when BOTH conditions met:
+        -- // 1. no ground detected below
+        -- // 2. below the threshold Y
+        local threshold = getValue("AntiVoidThreshold")
+        if not hasGroundBelow and rootPart.Position.Y < threshold then
+            stableFrames = 0
+            if savedCFrame then
+                rootPart.CFrame = savedCFrame
+            else
+                local spawn = WorkspaceService:FindFirstChildOfClass("SpawnLocation")
+                rootPart.CFrame = spawn and spawn.CFrame + Vector3.new(0, 5, 0) or CFrame.new(0, 10, 0)
+            end
+        end
+    end)
+end
+
+function AntiVoidFeature:onDisable()
+    savedCFrame = nil
+    stableFrames = 0
+end
+
+-- // No Friction Feature
+local NoFrictionFeature = registerFeature("NoFriction")
+local originalProperties = {}
+
+local ZERO_FRICTION = PhysicalProperties.new(0.004, 0, 0.5, 0, 0)
+
+local function applyTopart(part, props)
+    if part and part.Parent and part:IsA("BasePart") then
+        part.CustomPhysicalProperties = props
+    end
+end
+
+function NoFrictionFeature:onEnable()
+    if not character then return end
+    
+    for _, part: BasePart in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            originalProperties[part] = part.CurrentPhysicalProperties
+            applyTopart(part, ZERO_FRICTION)
+        end
+    end
+    
+    self:connect(character.DescendantAdded, function(part)
+        if not part:IsA("BasePart") then return end
+        task.defer(function() -- // defer so part is fully initialized
+            if not part.Parent then return end
+            originalProperties[part] = part.CurrentPhysicalProperties
+            applyTopart(part, ZERO_FRICTION)
+        end)
+    end)
+end
+
+function NoFrictionFeature:onDisable()
+    notify("restore to original properties ")
+    for part, props in pairs(originalProperties) do
+        pcall(applyTopart, part, props) -- // pcall in case part was destroyed
+    end
+    table.clear(originalProperties)
+end
+
+-- // Spectate Feature
+local SpectateFeature = registerFeature("Spectate")
+local spectateTarget = nil
+local originalCameraType = nil
+local originalCameraSubject = nil
+
+function SpectateFeature:setTarget(player)
+    if not player or player == LocalPlayer then return end
+    local humanoidToSpectate = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoidToSpectate then
+        return
+    end
+    
+    spectateTarget = player
+    originalCameraType    = originalCameraType    or camera.CameraType
+    originalCameraSubject = originalCameraSubject or camera.CameraSubject
+    
+    camera.CameraType    = Enum.CameraType.Custom
+    camera.CameraSubject = humanoidToSpectate
+    notify("Spectating: " .. player.Name)
+end
+
+function SpectateFeature:onEnable()
+    -- // set initial target from value
+    local players = stringToPlayers(getValue("SpectateTarget"))
+    local target = players and players[1]
+    if target then self:setTarget(target) end
+    
+    -- // follow target if they respawn
+    self:connect(Players.PlayerRemoving, function(player)
+        if player == spectateTarget then
+            self:nextPlayer()
+        end
+    end)
+    
+    -- // re-apply subject if character respawns
+    self:connect(RunService.Heartbeat, function()
+        if not spectateTarget then return end
+        local char = spectateTarget.Character
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        if hum and camera.CameraSubject ~= hum then
+            camera.CameraSubject = hum
+        end
+    end)
+end
+
+function SpectateFeature:onDisable()
+    -- // restore camera
+    if originalCameraType    then camera.CameraType    = originalCameraType    end
+    if originalCameraSubject then camera.CameraSubject = originalCameraSubject end
+    originalCameraType    = nil
+    originalCameraSubject = nil
+    spectateTarget        = nil
+end
+
+function SpectateFeature:nextPlayer()
+    local players = Players:GetPlayers()
+    -- // remove local player
+    for i, p in ipairs(players) do
+        if p == LocalPlayer then table.remove(players, i) break end
+    end
+    if #players == 0 then
+        self:disable()
+        return
+    end
+    
+    -- // find next player after current target
+    if spectateTarget then
+        for i, p in ipairs(players) do
+            if p == spectateTarget then
+                local next = players[i + 1] or players[1]
+                self:setTarget(next)
+                return
+            end
+        end
+    end
+    
+    -- // fallback to first player
+    self:setTarget(players[1])
+end
+
+function SpectateFeature:prevPlayer()
+    local players = Players:GetPlayers()
+    for i, p in ipairs(players) do
+        if p == LocalPlayer then table.remove(players, i) break end
+    end
+    if #players == 0 then return end
+    
+    if spectateTarget then
+        for i, p in ipairs(players) do
+            if p == spectateTarget then
+                local prev = players[i - 1] or players[#players]
+                self:setTarget(prev)
+                return
+            end
+        end
+    end
+    
+    self:setTarget(players[1])
+end
+
+-- // Property Change Connections (per character)
+local wsConn, jhConn
+
+local function setupPropertyConnections()
     if wsConn then wsConn:Disconnect() end
     if jhConn then jhConn:Disconnect() end
     
-    -- // Store base values
-    baseWalkSpeed = humanoid.WalkSpeed
-    baseJumpHeight = humanoid.JumpHeight
-    
-    -- // Update base values when other scripts change them
     wsConn = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
         if not getValue("WalkSpeedToggled") then
-            baseWalkSpeed = humanoid.WalkSpeed
+            baseWalkSpeed = math.round(humanoid.WalkSpeed)
         else
             humanoid.WalkSpeed = getValue("WalkSpeed")
         end
@@ -1674,113 +2020,101 @@ local function characterAdded(char)
             humanoid.JumpHeight = getValue("JumpHeight")
         end
     end)
+end
+
+
+local function characterAdded(char)
+    if ignoringCharacterAdded then return end
+    character = char
+    humanoid  = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
+    rootPart  = getRootFromChar(char)
     
-    isFlying = false
-    toggleFlying()
-    setWalkSpeed()
-    setJumpHeight()
-    toggleFreeze()
-end
-
----- Sit ----
-local function sit()
-    if not humanoid then return end
-    humanoid.Sit = not humanoid.Sit
-end
-
----- Trip ----
-local function trip()
-    if not humanoid then return end
-
-    if humanoid.PlatformStand then
-        humanoid.PlatformStand = false
-    else
-        rootPart:ApplyAngularImpulse(Vector3.new(250, 0, 0))
-        humanoid.PlatformStand = true
-    end
-end
-
----- Rejoin / Server Hop ----
--- // Rejoin (same server)
-local function rejoin()
-    TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
-end
--- // Server Hop (new random server)
-local function serverHop()
-    TeleportService:Teleport(PlaceId, LocalPlayer)
-end
-
----- Copy ----
-local function copyPlaceId()
-    everyClipboard(tostring(PlaceId))
-end
-local function copyUserId()
-    everyClipboard(tostring(LocalPlayer.UserId))
-end
-
----- Auto Execture ----
-local function saveToAutoExec()
-    if not makefolder or not writefile then return end
-    if not isfolder("autoexec") then makefolder("autoexec") end
+    baseWalkSpeed  = math.round(humanoid.WalkSpeed)
+    baseJumpHeight = humanoid.JumpHeight
     
-    local AUTOEXEC_CONTENT = ('loadstring(game:HttpGet("%s"))()'):format(SOURCE)
-    writefile(AUTOEXEC_PATH, AUTOEXEC_CONTENT)
-end
-
-local function removeFromAutoExec()
-    if isfile and isfile(AUTOEXEC_PATH) then
-        -- most executors dont have deletefile, so overwrite with empty
-        writefile(AUTOEXEC_PATH, "")
+    setupPropertyConnections()
+    
+    -- // Re-apply all toggled features on respawn
+    local toggleMap = {
+        { feature = FlyFeature,      value = "FlightToggled"   },
+        { feature = NoclipFeature,   value = "NoclipToggled"   },
+        { feature = InfJumpFeature,  value = "InfJumpToggled"  },
+        { feature = AntiAfkFeature,  value = "AntiAfkToggled"  },
+        { feature = FreezeFeature,   value = "FreezeToggled"   },
+        { feature = WalkSpeedFeature,value = "WalkSpeedToggled"},
+        { feature = JumpHeightFeature,value = "JumpHeightToggled"},
+        { feature = GodFeature,      value = "GodToggled"       },
+        { feature = AntiVoidFeature, value = "AntiVoidToggled" },
+        { feature = NoFrictionFeature,value = "NoFrictionToggled" },
+        { feature = SpectateFeature, value = "SpectateToggled" },
+    }
+    
+    for _, entry in ipairs(toggleMap) do
+        entry.feature:disable()
+        entry.feature:toggle(getValue(entry.value))
     end
+    
+    TeleportToPlayerFeature:updateVisibility()
 end
 
-local function toggleaAutoExecute()
-    if getValue("AutoExecute") then
-        saveToAutoExec()
-    else
-        removeFromAutoExec()
-    end
+-- // Wire Up
+local VALUE_MAP = {
+    { value = "FlightToggled",          feature = FlyFeature,              method = "toggle",            getVal = "FlightToggled"    },
+    { value = "NoclipToggled",          feature = NoclipFeature,           method = "toggle",            getVal = "NoclipToggled"    },
+    { value = "InfJumpToggled",         feature = InfJumpFeature,          method = "toggle",            getVal = "InfJumpToggled"   },
+    { value = "AntiAfkToggled",         feature = AntiAfkFeature,          method = "toggle",            getVal = "AntiAfkToggled"   },
+    { value = "FreezeToggled",          feature = FreezeFeature,           method = "toggle",            getVal = "FreezeToggled"    },
+    { value = "WalkSpeedToggled",       feature = WalkSpeedFeature,        method = "apply"                                          },
+    { value = "WalkSpeed",              feature = WalkSpeedFeature,        method = "apply"                                          },
+    { value = "JumpHeightToggled",      feature = JumpHeightFeature,       method = "apply"                                          },
+    { value = "JumpHeight",             feature = JumpHeightFeature,       method = "apply"                                          },
+    { value = "AutoExecute",            feature = AutoExecFeature,         method = "toggle",            getVal = "AutoExecute"      },
+    { value = "TeleportToPlayerType",   feature = TeleportToPlayerFeature, method = "updateVisibility"                               },
+    { value = "TeleportToPlayerLooped", feature = TeleportToPlayerFeature, method = "updateVisibility"                               },
+    { value = "GodToggled",             feature = GodFeature,              method = "toggle",            getVal = "GodToggled"       },
+    { value = "AntiVoidToggled",        feature = AntiVoidFeature,         method = "toggle",            getVal = "AntiVoidToggled"  },
+    { value = "NoFrictionToggled",      feature = NoFrictionFeature,       method = "toggle",            getVal = "NoFrictionToggled"},
+    { value = "SpectateToggled",        feature = SpectateFeature,         method = "toggle",            getVal = "SpectateToggled"  },
+    { value = "SpectateTarget",         feature = SpectateFeature,         method = "onEnable"                                       },
+}
+
+for _, entry in ipairs(VALUE_MAP) do
+    valueChanged(entry.value, function(val)
+        if entry.getVal then
+            entry.feature[entry.method](entry.feature, getValue(entry.getVal))
+        else
+            entry.feature[entry.method](entry.feature, val)
+        end
+    end)
 end
 
----- Set-up ----
-valueChanged("TeleportToPlayerType", teleportToPlayerTypeValueChanged)
-valueChanged("TeleportToPlayerLooped", toggleLoopTeleport)
-valueChanged("WalkSpeed", setWalkSpeed)
-valueChanged("JumpHeight", setJumpHeight)
-valueChanged("WalkSpeedToggled", setWalkSpeed)
-valueChanged("JumpHeightToggled", setJumpHeight)
-valueChanged("FlightToggled", toggleFlying)
-valueChanged("InfJumpToggled", toggleInfiniteJump)
-valueChanged("NoclipToggled", toggleNoclip)
-valueChanged("AntiAfkToggled", toggleAntiAfk)
-valueChanged("FreezeToggled", toggleFreeze)
-valueChanged("AutoExecute", toggleaAutoExecute)
+-- // Buttons
+setButtonFunc("Teleport",        function() TeleportFeature:execute() end)
+setButtonFunc("TeleportToPlayer",function() TeleportToPlayerFeature:execute() end)
+setButtonFunc("Sit",             function() SitFeature:execute() end)
+setButtonFunc("Trip",            function() TripFeature:execute() end)
+setButtonFunc("ServerHop",       function() ServerFeature:hop() end)
+setButtonFunc("RejoinServer",    function() ServerFeature:rejoin() end)
+setButtonFunc("CopyPlaceId",     function() ClipboardFeature:copy(PlaceId) end)
+setButtonFunc("CopyUserId",      function() ClipboardFeature:copy(LocalPlayer.UserId) end)
+setButtonFunc("SpectateNext", function() SpectateFeature:nextPlayer() end)
+setButtonFunc("SpectatePrev", function() SpectateFeature:prevPlayer() end)
+-- // Init
+TeleportToPlayerFeature:updateVisibility()
+AntiAfkFeature:toggle(getValue("AntiAfkToggled"))
+NoclipFeature:toggle(getValue("NoclipToggled"))
+InfJumpFeature:toggle(getValue("InfJumpToggled"))
+AutoExecFeature:toggle(getValue("AutoExecute"))
 
-setButtonFunc("Teleport", teleport)
-setButtonFunc("TeleportToPlayer", teleportToPlayer)
-setButtonFunc("Sit", sit)
-setButtonFunc("Trip", trip)
-setButtonFunc("ServerHop", serverHop)
-setButtonFunc("RejoinServer", rejoin)
-setButtonFunc("CopyPlaceId", copyPlaceId)
-setButtonFunc("CopyUserId", copyUserId)
+-- // Home Tab Info
+setValueText("Home", "GameName",   "Game: "    .. GameName)
+setValueText("Home", "PlaceId",    "Place ID: " .. PlaceId)
+setValueText("Home", "PlayerName", "Username: " .. LocalPlayer.Name)
+setValueText("Home", "UserId",     "User ID: "  .. LocalPlayer.UserId)
 
-toggleLoopTeleport()
-toggleAntiAfk()
-toggleNoclip()
-toggleInfiniteJump()
-teleportToPlayerTypeValueChanged()
-toggleFreeze()
-toggleaAutoExecute()
-
-setValueText("Home", "GameName", "Game detected: "..GameName)
-setValueText("Home", "PlaceId", "Place Id: "..PlaceId)
-setValueText("Home", "PlayerName", "Username: "..LocalPlayer.Name)
-setValueText("Home", "UserId", "User Id: "..LocalPlayer.UserId)
-
-if LocalPlayer.Character then
-    characterAdded(LocalPlayer.Character)
-end
+-- // Character
+if LocalPlayer.Character then characterAdded(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(characterAdded)
-notify("loaded successfully")
-notify("please check out the Home Tab for important information", 10)
+
+notify("Loaded successfully")
+notify("Check the Home tab for important information", 10)
