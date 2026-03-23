@@ -234,7 +234,7 @@ local PROPERTIES = {
             
             --// Void
             { Name = "AntiVoidToggled"              ,Type = "Bool",     LayoutOrder = 29, Data = {"Anti-Void", false} },
-            { Name = "AntiVoidThreshold"            ,Type = "Slider",   LayoutOrder = 30, Data = {"Void Threshold", -100, -500, 0, 10} },
+            { Name = "AntiVoidThreshold"            ,Type = "Slider",   LayoutOrder = 30, Data = {"Void Threshold", 50, 0, 500, 10} },
             { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 31, Data = {16}},
             
             { Name = "NoFrictionToggled"            ,Type = "Bool",     LayoutOrder = 32, Data = {"Less Friction (near 0 friction)", false} },
@@ -1844,7 +1844,7 @@ function AntiVoidFeature:onEnable()
         -- // only rescue when BOTH conditions met:
         -- // 1. no ground detected below
         -- // 2. below the threshold Y
-        local threshold = getValue("AntiVoidThreshold")
+        local threshold = getValue("AntiVoidThreshold") + workspace.FallenPartsDestroyHeight
         if not hasGroundBelow and rootPart.Position.Y < threshold then
             stableFrames = 0
             if savedCFrame then
