@@ -244,6 +244,11 @@ local PROPERTIES = {
             { Name = "SpectateTarget"               ,Type = "Textbox",  LayoutOrder = 35, Data = {"Spectate Target", "@closest"}  },
             { Name = "SpectateNext"                 ,Type = "Button",   LayoutOrder = 36, Data = {"Next Player"}                  },
             { Name = "SpectatePrev"                 ,Type = "Button",   LayoutOrder = 37, Data = {"Previous Player"}              },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 38, Data = {16}},
+            
+            { Name = "FreecamToggled"               ,Type = "Bool",     LayoutOrder = 39, Data = {"Freecam",             false}         },
+            { Name = "FreecamSpeed"                 ,Type = "Slider",   LayoutOrder = 40, Data = {"Freecam Speed",        50, 1, 300, 1} },
+            { Name = "FreecamSensitivity"           ,Type = "Slider",   LayoutOrder = 41, Data = {"Freecam Sensitivity",  0.3, 0.1, 2, 0.1} },
         }
     };
     ["Combat"]   = {LayoutOrder = 3, Divider = true, Image = "rbxassetid://80768163828428",
@@ -1890,7 +1895,6 @@ function NoFrictionFeature:onEnable()
 end
 
 function NoFrictionFeature:onDisable()
-    notify("restore to original properties ")
     for part, props in pairs(originalProperties) do
         pcall(applyTopart, part, props) -- // pcall in case part was destroyed
     end
@@ -1998,6 +2002,185 @@ function SpectateFeature:prevPlayer()
     self:setTarget(players[1])
 end
 
+-- // Freecam Feature
+local FreecamFeature = registerFeature("Freecam")
+local freecamPart = nil
+
+local SHIFT_MULTIPLIER = 3
+
+-- // Touch state
+local touchMoveStart = nil
+local touchLookStart = nil
+local touchLookDelta = Vector2.zero
+local activeTouches = {}
+
+function FreecamFeature:onEnable()
+    if not rootPart then return end
+    
+    freecamPart = Instance.new("Part")
+    freecamPart.Anchored      = true
+    freecamPart.CanCollide    = false
+    freecamPart.Transparency  = 1
+    freecamPart.Size          = Vector3.one
+    freecamPart.CFrame        = camera.CFrame
+    freecamPart.Parent        = WorkspaceService
+    
+    camera.CameraType    = Enum.CameraType.Scriptable
+    camera.CameraSubject = freecamPart
+    
+    local camCF = camera.CFrame
+    local _, y, _ = camCF:ToEulerAnglesYXZ()
+    
+    -- extract pitch manually (important)
+    local look = camCF.LookVector
+    local pitch = math.asin(look.Y)
+    local yaw = y
+    
+    local targetYaw = yaw
+    local targetPitch = pitch
+    
+    local rotating = false
+    local lastTouchLookPos = nil
+    
+    -- // PC right click handling
+    if not IsOnMobile then
+        self:connect(UserInputService.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                rotating = true
+                UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+            end
+        end)
+        
+        self:connect(UserInputService.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                rotating = false
+                UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+            end
+        end)
+    end
+    
+    -- // Mobile touch look (FIXED: delta instead of start position)
+    if IsOnMobile then
+        self:connect(UserInputService.TouchMoved, function(touch)
+            local screenSize = camera.ViewportSize
+            
+            if touch.Position.X >= screenSize.X / 2 then
+                if lastTouchLookPos then
+                    touchLookDelta = touch.Position - lastTouchLookPos
+                end
+                lastTouchLookPos = touch.Position
+            end
+        end)
+        
+        self:connect(UserInputService.TouchEnded, function(touch)
+            local screenSize = camera.ViewportSize
+            if touch.Position.X >= screenSize.X / 2 then
+                touchLookDelta = Vector2.zero
+                lastTouchLookPos = nil
+            end
+        end)
+    end
+    
+    self:connect(RunService.RenderStepped, function(dt)
+        local sensitivity = getValue("FreecamSensitivity")
+        local smoothness = 12 -- higher = smoother
+        
+        -- // ROTATION INPUT
+        if IsOnMobile then
+            targetYaw   -= math.rad(touchLookDelta.X * sensitivity)
+            targetPitch = math.clamp(
+                targetPitch - math.rad(touchLookDelta.Y * sensitivity),
+                math.rad(-89), math.rad(89)
+            )
+            
+            -- decay touch delta (smooth stop)
+            touchLookDelta *= 0.85
+        else
+            if rotating then
+                local delta = UserInputService:GetMouseDelta()
+                
+                targetYaw   -= math.rad(delta.X * sensitivity)
+                targetPitch = math.clamp(
+                    targetPitch - math.rad(delta.Y * sensitivity),
+                    math.rad(-89), math.rad(89)
+                )
+            end
+        end
+        
+        -- // SMOOTH ROTATION (LERP)
+        yaw   += (targetYaw   - yaw)   * math.clamp(dt * smoothness, 0, 1)
+        pitch += (targetPitch - pitch) * math.clamp(dt * smoothness, 0, 1)
+        
+        local rotation = CFrame.fromEulerAnglesYXZ(pitch, yaw, 0)
+        
+        -- // MOVEMENT
+        local moveDir = Vector3.zero
+        local speed   = getValue("FreecamSpeed")
+            * (UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and SHIFT_MULTIPLIER or 1)
+        
+        if IsOnMobile then
+            if touchMoveStart then
+                for _, pos in pairs(activeTouches) do
+                    if pos.X < camera.ViewportSize.X / 2 then
+                        local delta2D = pos - touchMoveStart
+                        
+                        if delta2D.Magnitude > 10 then
+                            local normalized = delta2D.Unit
+                            moveDir += rotation.LookVector  * -normalized.Y
+                            moveDir += rotation.RightVector *  normalized.X
+                        end
+                        break
+                    end
+                end
+            end
+        else
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += rotation.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= rotation.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= rotation.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += rotation.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir += Vector3.yAxis end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir -= Vector3.yAxis end
+        end
+        
+        -- // APPLY MOVEMENT (SMOOTH)
+        if moveDir.Magnitude > 0 then
+            freecamPart.CFrame = freecamPart.CFrame:Lerp(
+                CFrame.new(freecamPart.Position + moveDir.Unit * speed * dt) * rotation,
+                0.5
+            )
+        else
+            freecamPart.CFrame = freecamPart.CFrame:Lerp(
+                CFrame.new(freecamPart.Position) * rotation,
+                0.5
+            )
+        end
+        
+        camera.CFrame = freecamPart.CFrame
+    end)
+    
+    notify("Your character still moves while freecam is on.", 5)
+end
+
+function FreecamFeature:onDisable()
+    if not IsOnMobile then
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+    end
+    
+    -- // reset touch state
+    touchMoveStart = nil
+    touchLookStart = nil
+    touchLookDelta = Vector2.zero
+    table.clear(activeTouches)
+    
+    camera.CameraType    = Enum.CameraType.Custom
+    camera.CameraSubject = humanoid
+    
+    if freecamPart then
+        freecamPart:Destroy()
+        freecamPart = nil
+    end
+end
+
 -- // Property Change Connections (per character)
 local wsConn, jhConn
 
@@ -2047,6 +2230,7 @@ local function characterAdded(char)
         { feature = AntiVoidFeature, value = "AntiVoidToggled" },
         { feature = NoFrictionFeature,value = "NoFrictionToggled" },
         { feature = SpectateFeature, value = "SpectateToggled" },
+        { feature = FreecamFeature,  value = "FreecamToggled" }
     }
     
     for _, entry in ipairs(toggleMap) do
@@ -2076,6 +2260,7 @@ local VALUE_MAP = {
     { value = "NoFrictionToggled",      feature = NoFrictionFeature,       method = "toggle",            getVal = "NoFrictionToggled"},
     { value = "SpectateToggled",        feature = SpectateFeature,         method = "toggle",            getVal = "SpectateToggled"  },
     { value = "SpectateTarget",         feature = SpectateFeature,         method = "onEnable"                                       },
+    { value = "FreecamToggled",         feature = FreecamFeature,          method = "toggle",            getVal = "FreecamToggled" },
 }
 
 for _, entry in ipairs(VALUE_MAP) do
