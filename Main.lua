@@ -1,14 +1,15 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
-if UUI_Loaded then return end
-
 
 -- // Studio Detection
-local isStudio = not pcall(function()
-    assert(getgenv) -- getgenv only exists in exploits
-end)
+local isStudio = not pcall(function() assert(getgenv) end)
 
-if not isStudio then
-    pcall(function() getgenv().UUI_Loaded = true end)
+-- // Prevent double loading
+if isStudio then
+    if _G.UUI_Loaded then return end
+    _G.UUI_Loaded = true
+else
+    if getgenv().UUI_Loaded then return end
+    getgenv().UUI_Loaded = true
 end
 
 -- // Utility
@@ -273,7 +274,7 @@ local COLORS = {
 }
 
 local AUTOEXEC_PATH = "autoexec/UniversalUI.lua"
-local SOURCE = "loadstring"
+local SOURCE = "https://raw.githubusercontent.com/ABDULGHANI1010/UNIVERSALUI/refs/heads/main/Main"
 
 ---- Variables ---------------------------------------------------------------------------------------------
 local values = { } --> initialized values
@@ -1793,16 +1794,12 @@ local function copyUserId()
 end
 
 ---- Auto Execture ----
-local source = ""
-
 local function saveToAutoExec()
     if not makefolder or not writefile then return end
     if not isfolder("autoexec") then makefolder("autoexec") end
     
-    local ok, source = pcall(readfile, "UniversalUI.lua")
-    if ok and source then
-        writefile(AUTOEXEC_PATH, source)
-    end
+    local AUTOEXEC_CONTENT = ('loadstring(game:HttpGet("%s"))()'):format(SOURCE)
+    writefile(AUTOEXEC_PATH, AUTOEXEC_CONTENT)
 end
 
 local function removeFromAutoExec()
