@@ -274,7 +274,7 @@ local COLORS = {
 }
 
 local AUTOEXEC_PATH = "autoexec/UniversalUI.lua"
-local SOURCE = "https://raw.githubusercontent.com/ABDULGHANI1010/UNIVERSALUI/refs/heads/main/Main"
+local SOURCE = "https://raw.githubusercontent.com/ABDULGHANI1010/UNIVERSALUI/refs/heads/main/Main.lua"
 
 ---- Variables ---------------------------------------------------------------------------------------------
 local values = { } --> initialized values
