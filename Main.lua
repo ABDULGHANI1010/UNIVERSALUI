@@ -12,7 +12,7 @@ else
     getgenv().UUI_Loaded = true
 end
 
--- // Utility
+-- // Shim Compatibility
 local function missing(t, f, fallback)
     if type(f) == t then return f end
     return fallback
@@ -148,6 +148,8 @@ end)
 -- // Chat Version
 local isLegacyChat = TextChatService.ChatVersion == Enum.ChatVersion.LegacyChatService
 
+
+---- Constants ---------------------------------------------------------------------------------------------
 --[[
 {Name = '', Type = 'Info', LayoutOrder = 1, Data = {"desc"}},
 {Name = '', Type = 'Bool', LayoutOrder = 1, Data = {"desc", false}},
@@ -181,36 +183,50 @@ local PROPERTIES = {
             -- // UI Settings
            -- {Name = "HideKeybind",   Type = "Keybind",  LayoutOrder = 12, Data = {"Hide UI Keybind", "RightShift"}},
             {Name = "Notifications", Type = "Bool",     LayoutOrder = 13, Data = {"Notifications", true}},
+            {Name = "AutoExecute",   Type = "Bool",     LayoutOrder = 14, Data = {"Auto Execute", true}},
         }    
     };
     ["Player"]   = {LayoutOrder = 2, Divider = true, Image = "rbxassetid://88931379871493",
         Values = {
-            {Name = 'WalkSpeedToggled', Type = 'Bool', LayoutOrder = 1, Data = {"Walk Speed Toggled", false}},
-            {Name = 'WalkSpeed', Type = 'Slider', LayoutOrder = 2, Data = {"Walk Speed", 16, 0, 300, 1}},
-            {Name = 'Space', Type = 'Spacing', LayoutOrder = 3, Data = {16}},
-            {Name = 'JumpHeightToggled', Type = 'Bool', LayoutOrder = 4, Data = {"Jump Height Toggled", false}},
-            {Name = 'JumpHeight', Type = 'Slider', LayoutOrder = 5, Data = {"Jump Height", 7.2, 0, 500, 0.1}},
-            {Name = 'InfJumpToggled', Type = 'Bool', LayoutOrder = 6, Data = {"Infinite Jump Toggled", false}},
-            {Name = 'Space', Type = 'Spacing', LayoutOrder = 7, Data = {16}},
-            {Name = 'FlightToggled', Type = 'Bool', LayoutOrder = 8, Data = {"Fly Toggled", false}},
-            {Name = 'FlightSpeed', Type = 'Slider', LayoutOrder = 9, Data = {"Fly Speed", 50, 0, 300, 1}},
-            {Name = 'Space', Type = 'Spacing', LayoutOrder = 10, Data = {16}},
-            {Name = 'NoclipToggled', Type = 'Bool', LayoutOrder = 11, Data = {"No-clip Toggled", false}},
-            {Name = 'AntiAfkToggled', Type = 'Bool', LayoutOrder = 12, Data = {"Anti-Afk Toggled", false}},
-            {Name = 'TeleportPosition', Type = 'Textbox', LayoutOrder = 13, Data = {"Teleport Position", "0, 0, 0"}},
-            {Name = 'Teleport', Type = 'Button', LayoutOrder = 14, Data = {"Teleport to Position"}},
-            {Name = 'Space', Type = 'Spacing', LayoutOrder = 15, Data = {16}},
-            {Name = 'TeleportToPlayerType', Type = 'Dropdown', LayoutOrder = 16, Data = {"Teleport to Player type", 1, {"Instant", "Tween", "Pulse", "Loop"}}},
-            {Name = 'TeleportPlayerName', Type = 'Textbox', LayoutOrder = 17, Data = {"Teleport to Player Name", "@random"}},
-            {Name = 'TeleportToPlayerTweenDuration', Type = 'Textbox', LayoutOrder = 18, Data = {"Tween Duration", ""}},
-            {Name = 'TeleportToPlayerPulseDuration', Type = 'Textbox', LayoutOrder = 19, Data = {"Pulse Duration", ""}},
-            {Name = 'TeleportToPlayerOffset', Type = 'Textbox', LayoutOrder = 20, Data = {"Player Teleport Offset", "0, 3, 0"}},
-            {Name = 'TeleportToPlayerLooped', Type = 'Bool', LayoutOrder = 21, Data = {"Loop Teleport to Player", false}},
-            {Name = 'TeleportToPlayer', Type = 'Button', LayoutOrder = 22, Data = {"Teleport to Player"}},
-            {Name = 'Space', Type = 'Spacing', LayoutOrder = 23, Data = {16}},
-            {Name = 'Sit', Type = 'Button', LayoutOrder = 24, Data = {"Sit"}},
-            {Name = 'Trip', Type = 'Button', LayoutOrder = 25, Data = {"Trip"}},
-            {Name = 'FreezeToggled', Type = 'Bool', LayoutOrder = 26, Data = {"Freeze Character Toggled", false}},
+            -- // Walk Speed
+            {Name = 'WalkSpeedToggled'              ,Type = 'Bool',     LayoutOrder = 1,  Data = {"Walk Speed Toggled", false}},
+            {Name = 'WalkSpeed'                     ,Type = 'Slider',   LayoutOrder = 2,  Data = {"Walk Speed", 16, 0, 300, 1}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 3,  Data = {16}},
+            
+            -- // Jump
+            {Name = 'JumpHeightToggled'             ,Type = 'Bool',     LayoutOrder = 4,  Data = {"Jump Height Toggled", false}},
+            {Name = 'JumpHeight'                    ,Type = 'Slider',   LayoutOrder = 5,  Data = {"Jump Height", 7.2, 0, 500, 0.1}},
+            {Name = 'InfJumpToggled'                ,Type = 'Bool',     LayoutOrder = 6,  Data = {"Infinite Jump Toggled", false}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 7,  Data = {16}},
+            
+            -- // Speed
+            {Name = 'FlightToggled'                 ,Type = 'Bool',     LayoutOrder = 8,  Data = {"Fly Toggled", false}},
+            {Name = 'FlightSpeed'                   ,Type = 'Slider',   LayoutOrder = 9,  Data = {"Fly Speed", 50, 0, 300, 1}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 10, Data = {16}},
+            
+            -- // Noclip and Anit-afk
+            {Name = 'NoclipToggled'                 ,Type = 'Bool',     LayoutOrder = 11, Data = {"No-clip Toggled", false}},
+            {Name = 'AntiAfkToggled'                ,Type = 'Bool',     LayoutOrder = 12, Data = {"Anti-Afk Toggled", false}},
+            
+            -- // Teleport
+            {Name = 'TeleportPosition'              ,Type = 'Textbox',  LayoutOrder = 13, Data = {"Teleport Position", "0, 0, 0"}},
+            {Name = 'Teleport'                      ,Type = 'Button',   LayoutOrder = 14, Data = {"Teleport to Position"}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 15, Data = {16}},
+            
+            -- more
+            {Name = 'TeleportToPlayerType'          ,Type = 'Dropdown', LayoutOrder = 16, Data = {"Teleport to Player type", 1, {"Instant", "Tween", "Pulse", "Loop"}}},
+            {Name = 'TeleportPlayerName'            ,Type = 'Textbox',  LayoutOrder = 17, Data = {"Teleport to Player Name", "@random"}},
+            {Name = 'TeleportToPlayerTweenDuration' ,Type = 'Textbox',  LayoutOrder = 18, Data = {"Tween Duration", ""}},
+            {Name = 'TeleportToPlayerPulseDuration' ,Type = 'Textbox',  LayoutOrder = 19, Data = {"Pulse Duration", ""}},
+            {Name = 'TeleportToPlayerOffset'        ,Type = 'Textbox',  LayoutOrder = 20, Data = {"Player Teleport Offset", "0, 3, 0"}},
+            {Name = 'TeleportToPlayerLooped'        ,Type = 'Bool',     LayoutOrder = 21, Data = {"Loop Teleport to Player", false}},
+            {Name = 'TeleportToPlayer'              ,Type = 'Button',   LayoutOrder = 22, Data = {"Teleport to Player"}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 23, Data = {16}},
+            
+            --// Character
+            {Name = 'Sit'                           ,Type = 'Button',   LayoutOrder = 24, Data = {"Sit"}},
+            {Name = 'Trip'                          ,Type = 'Button',   LayoutOrder = 25, Data = {"Trip"}},
+            {Name = 'FreezeToggled'                 ,Type = 'Bool',     LayoutOrder = 26, Data = {"Freeze Character Toggled", false}},
         }
     };
     ["Combat"]   = {LayoutOrder = 3, Divider = true, Image = "rbxassetid://80768163828428",
@@ -234,7 +250,7 @@ local PROPERTIES = {
 }
 
 local COLORS = {
-    ---- Navigation Bar Colors
+    ---- // Navigation Bar Colors
     backgroundColor = Color3.new(0.0980392, 0.101961, 0.121569),
     navDividerColor = Color3.new(0.192157, 0.2, 0.239216),
     navStrokeColor = Color3.new(0.192157, 0.2, 0.239216),
@@ -245,7 +261,7 @@ local COLORS = {
     navSelectedTextColor = Color3.new(0.831373, 0.831373, 0.831373),
     navSelectedImageColor = Color3.new(0.831373, 0.831373, 0.831373),
     
-    ---- Panel Colors
+    ---- // Panel Colors
     panelStrokeColor = Color3.new(0.192157, 0.2, 0.239216),
     panelTextColor = Color3.new(0.411765, 0.431373, 0.513725),
     
@@ -267,11 +283,13 @@ local COLORS = {
     
     spacerColor = Color3.new(0.172549, 0.180392, 0.211765),
     
-    ---- Notification Colors ----
+    ----//  Notification Colors
     notificationStrokeColor = Color3.new(0.192157, 0.2, 0.239216),
     notificationIconColor = Color3.new(0.411765, 0.427451, 0.509804),
     notificationTextColor = Color3.new(0.411765, 0.431373, 0.513725),
 }
+
+local MAX_PANEL_SIZE_Y = UDim.new(1, -54)
 
 local AUTOEXEC_PATH = "autoexec/UniversalUI.lua"
 local SOURCE = "https://raw.githubusercontent.com/ABDULGHANI1010/UNIVERSALUI/refs/heads/main/Main.lua"
@@ -303,7 +321,7 @@ local new = function(instance, properties)
     return new
 end
 
-local newAnimation = function(data)
+local newAnimation = function(data) --> class for creating bulk animations
     local tweens = {}
     for _, tweenData in data do
         table.insert(
@@ -328,11 +346,12 @@ local callFuncsWithParams = function(funcs, ...)
 end
 
 local setValue = function(valueName, value)
-    values[valueName] = value
-    for _, func in valueChangedFuncs[valueName] or {} do
-        task.spawn(func, value)
+    if values[valueName] == value then
+        -- prevent unnecessary function calls and aware UI listeners from looping
+        return
     end
-    
+    values[valueName] = value
+    callFuncsWithParams(valueChangedFuncs[valueName] or {}, value)
 end
 
 local getValue = function(valueName)
@@ -411,11 +430,10 @@ local newNavBar = function()
         Color = COLORS.navStrokeColor,
         Parent = navBar
     })
-    
     return navBar
 end
 
-local newTab = function(name, data)
+local newTab = function(name, data)     --  [Tab] / [Tab] / [Tab] / [Tab] / [Tab]
     local frame = new('ImageButton', {
         Name = name,
         Size = UDim2.new(0, 90, 1, 0),
@@ -423,7 +441,6 @@ local newTab = function(name, data)
         ImageTransparency = 1,
         LayoutOrder = data.LayoutOrder
     })
-    
     new('ImageLabel', {
         Image = data.Image,
         Parent = frame,
@@ -434,7 +451,6 @@ local newTab = function(name, data)
         ImageColor3 = COLORS.navImageColor,
         Name = "Icon"
     })
-    
     new('TextLabel', {
         Text = name,
         Parent = frame,
@@ -450,7 +466,6 @@ local newTab = function(name, data)
         ZIndex = 2,
         Name = "Label"
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 10),
         PaddingRight = UDim.new(0, 10),
@@ -458,7 +473,6 @@ local newTab = function(name, data)
         PaddingTop = UDim.new(0, 5),
         Parent = frame
     })
-    
     if data.Divider then
         new('Frame', {
             Size = UDim2.new(0, 2, 0.7, 0),
@@ -469,12 +483,11 @@ local newTab = function(name, data)
             BorderSizePixel = 0,
         })
     end
-    
     return frame
 end
 
 ---- Panel Frame ----
-local newInfo = function(name, data)
+local newInfo = function(name, data)    --  [................Text................]
     local textLabel = new('TextLabel', {
         Name = name,
         Size = UDim2.new(1, 0, 0, 0),
@@ -487,7 +500,6 @@ local newInfo = function(name, data)
         BackgroundTransparency = 1,
         TextWrapped = true
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 5),
         PaddingRight = UDim.new(0, 5),
@@ -495,11 +507,10 @@ local newInfo = function(name, data)
         PaddingTop = UDim.new(0, 5),
         Parent = textLabel
     })
-    
     return textLabel
 end
 
-local newBool = function(name, data)
+local newBool = function(name, data)    --  [.Text......................[Switch].]
     local frame = new('Frame', {
         Name = name,
         Size = UDim2.new(1, 0, 0, 28),
@@ -626,22 +637,14 @@ local newBool = function(name, data)
     return frame
 end
 
-local newSlider = function(name, data)
-    --> data[1] = description
-    --> data[2] = default value
-    --> data[3] = min
-    --> data[4] = max
-    --> data[5] = increment
+local newSlider = function(name, data)  --  [.Text..............-----[Slider]----]
     local min, max, default, increment = data[3], data[4], data[2], data[5]
-    
     local frame = new('Frame', {
         Name = name,
         Size = UDim2.new(1, 0, 0, 28),
         BackgroundTransparency = 1,
     }) 
-    
     local textLabel = new('TextLabel', {
-        Name = name,
         Size = UDim2.new(1, 0, 1, 0),
         Text = data[1],
         Font = Enum.Font.GothamBold,
@@ -652,7 +655,6 @@ local newSlider = function(name, data)
         TextTruncate = Enum.TextTruncate.AtEnd,
         Parent = frame
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 5),
         PaddingRight = UDim.new(0, 5),
@@ -660,10 +662,8 @@ local newSlider = function(name, data)
         PaddingTop = UDim.new(0, 5),
         Parent = textLabel
     })
-    
     local valueLabel = new('TextLabel', {
         Size = UDim2.new(1, 0, 1, 0),
-        Text = "1.00",
         Font = Enum.Font.GothamBold,
         TextSize = 15,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -672,7 +672,6 @@ local newSlider = function(name, data)
         TextTruncate = Enum.TextTruncate.AtEnd,
         Parent = frame
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 5),
         PaddingRight = UDim.new(0, 5),
@@ -680,7 +679,6 @@ local newSlider = function(name, data)
         PaddingTop = UDim.new(0, 5),
         Parent = valueLabel
     })
-    
     local sliderBar = new('Frame', {
         Size = UDim2.new(0, 200, 0, 4),
         Position = UDim2.new(1, -45, 0.5, 0),
@@ -689,12 +687,10 @@ local newSlider = function(name, data)
         BorderSizePixel = 0,
         Parent = frame
     })
-    
     new('UICorner', {
         CornerRadius = UDim.new(1, 0),
         Parent = sliderBar
     })
-    
     local sliderBall = new('Frame', {
         Parent = sliderBar,
         Size = UDim2.new(0, 16, 0, 16),
@@ -703,12 +699,16 @@ local newSlider = function(name, data)
         BackgroundColor3 = COLORS.valueAccentWhite,
         BorderSizePixel = 0,
     }) :: Frame
-    
     new('UIStroke', {
         Color = COLORS.sliderBarColor,
         Thickness = 1.25,
         Parent = sliderBall
     })
+    new('UICorner', {
+        CornerRadius = UDim.new(1, 0),
+        Parent = sliderBall
+    })
+    
     local function setSlider(value)
         local stepped = math.round(value / increment) * increment
         local clamped = math.clamp(stepped, min, max)
@@ -755,21 +755,17 @@ local newSlider = function(name, data)
         end
     end)
     
-    new('UICorner', {
-        CornerRadius = UDim.new(1, 0),
-        Parent = sliderBall
-    })
+   
     
     return frame
 end
 
-local newButton = function(name, data)
+local newButton = function(name, data)  --  [...............Button...............]
     local frame = new('Frame', {
         Name = name,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 28),
     })
-    
     local textButton = new('TextButton', {
         Size = UDim2.new(1, 0, 1, 0), 
         Text = data[1],
@@ -782,44 +778,29 @@ local newButton = function(name, data)
         AutoButtonColor = false,
         Parent = frame
     })
-    
-    textButton.Activated:Connect(function()
-        callFuncsWithParams(buttonFuncs[name] or {})
-    end)
-    
     new('UICorner', {
         CornerRadius = UDim.new(0, 5),
         Parent = textButton
     })
-    
     new('UIPadding', {
         PaddingTop = UDim.new(0, 2),
         PaddingBottom = UDim.new(0, 2),
         Parent = frame
     })
     
+    textButton.Activated:Connect(function()
+        callFuncsWithParams(buttonFuncs[name] or {})
+    end)
     return frame
 end
 
-local newTextbox = function(name, data)
-    --> data[1] = placeholder text
-    --> data[2] = default text
-    
+local newTextbox = function(name, data) --  [.Text.............._____[Text box]__]
     local frame = new('Frame', {
         Name = name,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 28),
     })
-    
-    --new('UIPadding', {
-    --    PaddingLeft = UDim.new(0, 4),
-    --    PaddingRight = UDim.new(0, 4),
-    --    PaddingBottom = UDim.new(0, 4),
-    --    PaddingTop = UDim.new(0, 4),
-    --    Parent = frame
-    --})
-    
-    local textLabel = new('TextLabel', {
+    new('TextLabel', {
         Size = UDim2.new(1, 0, 1, 0),
         Text = data[1],
         Font = Enum.Font.GothamBold,
@@ -830,7 +811,6 @@ local newTextbox = function(name, data)
         TextTruncate = Enum.TextTruncate.AtEnd,
         Parent = frame
     })
-    
     local textBox = new('TextBox', {
         Size = UDim2.new(0.5, 0, 1, 0), 
         AnchorPoint = Vector2.new(1, 0.5),
@@ -847,43 +827,36 @@ local newTextbox = function(name, data)
         TextWrapped = true,
         Parent = frame
     }) :: TextBox
-    
-    textBox.FocusLost:Connect(function()
-        setValue(name, textBox.Text)
-    end)
-    
-    setValue(name, data[2])
-    
     new('UICorner', {
         CornerRadius = UDim.new(0, 5),
         Parent = textBox
     })
-    
     new('UIPadding', {
         PaddingTop = UDim.new(0, 2),
         PaddingBottom = UDim.new(0, 2),
         PaddingLeft = UDim.new(0, 5),
         Parent = frame
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 8),
         PaddingRight = UDim.new(0, 8),
         Parent = textBox
     })
+    textBox.FocusLost:Connect(function()
+        setValue(name, textBox.Text)
+    end)
     
+    setValue(name, data[2])
     return frame
 end
 
-local newDropdown = function(name, data)
-    --> {"Desc", 1, {"Here", "There", "Bruh"}}
+local newDropdown = function(name, data)--  [.Text............[Dropdown container]]v
     local frame = new('Frame', {
         Name = name,
         Size = UDim2.new(1, 0, 0, 28),
         BackgroundTransparency = 1,
     }) 
-    
-    local textLabel = new('TextLabel', {
+    new('TextLabel', {
         Size = UDim2.new(1, 0, 1, 0),
         Text = data[1],
         Font = Enum.Font.GothamBold,
@@ -894,14 +867,12 @@ local newDropdown = function(name, data)
         TextTruncate = Enum.TextTruncate.AtEnd,
         Parent = frame
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 5),
         PaddingBottom = UDim.new(0, 2),
         PaddingTop = UDim.new(0, 2),
         Parent = frame
     })
-    
     local dropDownContainer = new('TextButton', {
         Size = UDim2.new(0, 180, 1, 0),
         Position = UDim2.new(1, 0, 0.5, 0),
@@ -915,12 +886,10 @@ local newDropdown = function(name, data)
         TextColor3 = COLORS.panelTextColor,
         Font = Enum.Font.GothamBold
     })
-    
     new('UICorner', {
         CornerRadius = UDim.new(0, 5),
         Parent = dropDownContainer
     })
-    
     new('UIPadding', {
         PaddingLeft = UDim.new(0, 4),
         PaddingRight = UDim.new(0, 4),
@@ -939,13 +908,9 @@ local newDropdown = function(name, data)
         Parent = dropDownContainer,
         Rotation = -90
     })
-    
-    
-    
     new('UIAspectRatioConstraint', {
         Parent = dropBoxIcon
     })
-    
     local dropdown = new('Frame', {
         Parent = dropDownContainer,
         Size = UDim2.new(1, 0, 1, 0),
@@ -956,40 +921,32 @@ local newDropdown = function(name, data)
         Visible = false,
         ZIndex = 99,
     })
-    
     new('UIStroke', {
         Color = COLORS.backgroundColor,
         Thickness = 2,
         Parent = dropdown
     })
-    
-    local dropBoxOpenAnim = newAnimation({
-        {
-            dropBoxIcon,
-            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
-            {Rotation = 0}
-        }
-    })
-    
-    local dropBoxCloseAnim = newAnimation({
-        {
-            dropBoxIcon,
-            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
-            {Rotation = -90}
-        }
-    })
-    
     new('UICorner', {
         CornerRadius = UDim.new(0, 5),
         Parent = dropdown
     })
-    
     new('UIListLayout', {
         FillDirection = Enum.FillDirection.Vertical, 
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = dropdown,
         VerticalAlignment = Enum.VerticalAlignment.Top
     })
+    
+    local dropBoxOpenAnim = newAnimation({{
+            dropBoxIcon,
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+            {Rotation = 0}
+       }})
+    local dropBoxCloseAnim = newAnimation({{
+            dropBoxIcon,
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+            {Rotation = -90}
+    }})
     
     local function addDropdownItem(name)
         local item = new('TextButton', {
@@ -1020,7 +977,6 @@ local newDropdown = function(name, data)
         setValue(name, strng)
     end
     
-    
     local isToggled = false
     local function toggleDropdownVisibility(bool)
         if not bool or typeof(bool) ~= "boolean" then
@@ -1050,13 +1006,12 @@ local newDropdown = function(name, data)
     return frame
 end
 
-local newSpacing = function(name, data)
+local newSpacing = function(name, data) --  [                                     ]
     local frame = new('Frame', {
         Name = name,
         Size = UDim2.new(1, 0, 0, data[1]),
         BackgroundTransparency = 1,
     })
-    
     new('Frame', {
         Size = UDim2.new(1, -10, 0, 2),
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1068,6 +1023,16 @@ local newSpacing = function(name, data)
     
     return frame
 end
+
+local dataTypeConstructors = {
+    Info     = newInfo,     -- string
+    Bool     = newBool,     -- bool
+    Slider   = newSlider,   -- number
+    Button   = newButton,   -- func
+    Textbox  = newTextbox,  -- string(number,vector etc)
+    Spacing  = newSpacing,   -- none
+    Dropdown = newDropdown, -- string(array)
+}
 
 local newPanel = function(name, data)
     local panelframe = new('ScrollingFrame', {
@@ -1108,41 +1073,14 @@ local newPanel = function(name, data)
     })
     
     for _, value in data.Values do
-        if value.Type == 'Info' then
-            local info = newInfo(value.Name, value.Data)
-            info.Parent = panelframe
-            info.LayoutOrder = value.LayoutOrder
-            
-        elseif value.Type == 'Bool' then
-            local bool = newBool(value.Name, value.Data)
-            bool.Parent = panelframe
-            bool.LayoutOrder = value.LayoutOrder
-            
-        elseif value.Type == 'Slider' then
-            local slider = newSlider(value.Name, value.Data)
-            slider.Parent = panelframe
-            slider.LayoutOrder = value.LayoutOrder
-            
-        elseif value.Type == 'Button' then
-            local button = newButton(value.Name, value.Data)
-            button.Parent = panelframe
-            button.LayoutOrder = value.LayoutOrder
-            
-        elseif value.Type == 'Textbox' then
-            local textbox = newTextbox(value.Name, value.Data)
-            textbox.Parent = panelframe
-            textbox.LayoutOrder = value.LayoutOrder
-            
-        elseif value.Type == 'Dropdown' then
-            local dropdown = newDropdown(value.Name, value.Data)
-            dropdown.Parent = panelframe
-            dropdown.LayoutOrder = value.LayoutOrder
-            
-        elseif value.Type == "Spacing" then
-            local spacing = newSpacing(value.Name, value.Data)
-            spacing.Parent = panelframe
-            spacing.LayoutOrder = value.LayoutOrder
+        local dataTypeConstructor = dataTypeConstructors[value.Type]
+        if not dataTypeConstructor then
+            warn("Invalid data type: " .. value.Type)
+            continue
         end
+        local dataTypeFrm = dataTypeConstructor(value.Name, value.Data)
+        dataTypeFrm.Parent = panelframe
+        dataTypeFrm.LayoutOrder = value.LayoutOrder
     end
     
     return panelframe
@@ -1194,7 +1132,6 @@ local newNotification = function(data)
         ImageColor3 = COLORS.notificationIconColor,
         Parent = frame
     })
-    
     new('TextLabel', {
         Size = UDim2.new(1, -28, 0, 24),
         Position = UDim2.new(0, 28, 0, 0),
@@ -1210,7 +1147,6 @@ local newNotification = function(data)
         SizeConstraint = Enum.SizeConstraint.RelativeXX,
         RichText = true
     })
-    
     new('UICorner', {
         CornerRadius = UDim.new(0, 11), 
         Parent = frame
@@ -1228,7 +1164,6 @@ local newNotification = function(data)
         Parent = frame,
         Name = "Padding"
     })
-    
     return mainframe
 end
 
@@ -1261,41 +1196,34 @@ for menuName, menuData in PROPERTIES do
     
     ---- Menu Animations ----
     local select = newAnimation({
-        {
-            navTab,
+        {navTab,
             TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
             {Size = UDim2.new(0, 100, 1, 0)}
         },
-        {
-            navTab.Icon, 
+        {navTab.Icon, 
             TweenInfo.new(.14, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
             {ImageColor3 = COLORS.navSelectedImageColor, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(0.5, 0.15)}
         },
-        {
-            navTab.Label, 
+        {navTab.Label, 
             TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
             {TextColor3 = COLORS.navSelectedTextColor}
         }
     })
     
     local deselect = newAnimation({
-        {
-            navTab,
+        {navTab,
             TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
             {Size = UDim2.new(0, 90, 1, 0)}
         },
-        {
-            navTab.Icon, 
+        {navTab.Icon, 
             TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
             {ImageColor3 = COLORS.navImageColor, Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(0.5, 0)}
         },
-        {
-            navTab.Label, 
+        {navTab.Label, 
             TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
             {TextColor3 = COLORS.navTextColor}
         }  
     })
-    
     
     local function onMenuClick()
         openMenu(menuName)
@@ -1306,10 +1234,9 @@ for menuName, menuData in PROPERTIES do
 end
 
 ---- Panel Scaling ----
-local maxPanelSizeY = UDim.new(1, -54)
 local function updatePanelSize()
     local screenSize = screenGui.AbsoluteSize
-    local maximumYOffset = maxPanelSizeY.Scale * screenSize.Y + maxPanelSizeY.Offset + maxPanelSizeY.Offset
+    local maximumYOffset = MAX_PANEL_SIZE_Y.Scale * screenSize.Y + MAX_PANEL_SIZE_Y.Offset + MAX_PANEL_SIZE_Y.Offset
     
     for _, menu in pairs(createdNavTabs) do
         local uiListLayout = menu.Panel.ListLayout :: UIListLayout
@@ -1341,16 +1268,14 @@ local notify = function(text, duration)
     notification.Parent = notificationContainer
     
     local fadeIn = newAnimation({
-        {
-            notification.GlideFrame,
+        {notification.GlideFrame,
             TweenInfo.new(0.25, Enum.EasingStyle.Circular, Enum.EasingDirection.Out),
             {Position = UDim2.new(0, 0, 0, 0)}
         }
     })
     
     local fadeOut = newAnimation({
-        {
-            notification.GlideFrame,
+        {notification.GlideFrame,
             TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
             {Position = UDim2.new(1, 10, 0, 0)}
         }
@@ -1366,12 +1291,10 @@ local notify = function(text, duration)
 end
 
 local function getRootFromChar(character)
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    return rootPart or nil
+    return character:FindFirstChild("HumanoidRootPart") or nil
 end
 
 local function stringToVector3(str)
-    print(str)
     local _, result = pcall(function()
         return Vector3.new(unpack(string.split(str, ",")))
     end)
@@ -1490,30 +1413,33 @@ local function toggleFlying()
     
     bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.Velocity = Vector3.zero
-    bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Name = uniqueIdentifier
     bodyVelocity.Parent = rootPart
     
     bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bodyGyro.P = 9e3
     bodyGyro.Name = uniqueIdentifier
     bodyGyro.Parent = rootPart
     
     flyConnection = RunService.RenderStepped:Connect(function()
+        -- Move direction including Q and E for vertical movement
         local moveDirection = humanoid.MoveDirection + Vector3.new(0, 
             (UserInputService:IsKeyDown(Enum.KeyCode.E) and 1 or 0) +
                 (UserInputService:IsKeyDown(Enum.KeyCode.Q) and -1 or 0),
             0)
         
+        -- Convert to flat camera space
         local flatCamCF = CFrame.new(
             camera.CFrame.Position,
             camera.CFrame.Position + Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
         )
+        
+        -- Convert move direction to flat camera space
         local relativeMove = (camera.CFrame * CFrame.new(
             flatCamCF:VectorToObjectSpace(moveDirection)
             )).Position - camera.CFrame.Position
-        
-        local elevationDir = Vector3.new(relativeMove.X, 0, relativeMove.Z).Unit
         
         -- Apply velocity
         if relativeMove.Magnitude > 0 then
@@ -1528,7 +1454,6 @@ end
 
 ---- Infinite Jump ----
 local infiniteJumpConnection = nil
-
 local function toggleInfiniteJump()
     if not getValue("InfJumpToggled") then 
         -- necessary cleanup
@@ -1536,6 +1461,7 @@ local function toggleInfiniteJump()
         return 
     end
     if infiniteJumpConnection then return end
+    
     local jumpDebounce = false
     infiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
         if jumpDebounce or not humanoid then return end
@@ -1548,7 +1474,6 @@ end
 
 ---- Infinite Jump ----
 local noclipConnection = nil
-
 local function toggleNoclip()
     if not getValue("NoclipToggled") then 
         -- necessary cleanup
@@ -1557,6 +1482,7 @@ local function toggleNoclip()
         return 
     end
     if noclipConnection then return end
+    
     noclipConnection = RunService.RenderStepped:Connect(function()
         if not character then return end
         for _, part in ipairs(character:GetDescendants()) do
@@ -1576,6 +1502,7 @@ local function toggleAntiAfk()
         return 
     end
     if idledConnection then return end
+    
     idledConnection = LocalPlayer.Idled:Connect(function()
         Services.VirtualUser:CaptureController()
         Services.VirtualUser:ClickButton2(Vector2.new())
@@ -1586,7 +1513,7 @@ end
 local function teleport()
     if not rootPart or not character then return end
     local position = stringToVector3(getValue("TeleportPosition"))
-    print(position)
+    
     if position then
         rootPart.CFrame = CFrame.new(position)
     end
@@ -1595,7 +1522,6 @@ end
 local loopedTeleportConnection = nil
 local teleportTween = nil
 local pulseTeleportTask = nil
-
 local function cleanupTeleport()
     if teleportTween then
         teleportTween:Cancel()
@@ -1759,7 +1685,6 @@ end
 ---- Sit ----
 local function sit()
     if not humanoid then return end
-    
     humanoid.Sit = not humanoid.Sit
 end
 
@@ -1809,7 +1734,7 @@ local function removeFromAutoExec()
     end
 end
 
-local function autoExecute()
+local function toggleaAutoExecute()
     if getValue("AutoExecute") then
         saveToAutoExec()
     else
@@ -1829,7 +1754,7 @@ valueChanged("InfJumpToggled", toggleInfiniteJump)
 valueChanged("NoclipToggled", toggleNoclip)
 valueChanged("AntiAfkToggled", toggleAntiAfk)
 valueChanged("FreezeToggled", toggleFreeze)
-valueChanged("AutoExecute", autoExecute)
+valueChanged("AutoExecute", toggleaAutoExecute)
 
 setButtonFunc("Teleport", teleport)
 setButtonFunc("TeleportToPlayer", teleportToPlayer)
@@ -1846,6 +1771,7 @@ toggleNoclip()
 toggleInfiniteJump()
 teleportToPlayerTypeValueChanged()
 toggleFreeze()
+toggleaAutoExecute()
 
 setValueText("Home", "GameName", "Game detected: "..GameName)
 setValueText("Home", "PlaceId", "Place Id: "..PlaceId)
@@ -1858,25 +1784,3 @@ end
 LocalPlayer.CharacterAdded:Connect(characterAdded)
 notify("loaded successfully")
 notify("please check out the Home Tab for important information", 10)
-
---[[
-{Name = "UIName",        Type = "Info",   LayoutOrder = 1,  Data = {"UNIVERSAL UI"}},
-            {Name = "Tagline",       Type = "Info",   LayoutOrder = 2,  Data = {"One Script, All Games."}},
-            {Name = "Creator",       Type = "Info",   LayoutOrder = 3,  Data = {"By Hebebebe0942 on Discord."}},
-            
-            -- // Game Info
-            {Name = "GameName",      Type = "Info",   LayoutOrder = 4,  Data = {""}}, -- filled in dynamically
-            {Name = "PlaceId",       Type = "Info",   LayoutOrder = 5,  Data = {""}}, -- filled in dynamically
-            {Name = "CopyPlaceId",   Type = "Button", LayoutOrder = 6,  Data = {"Copy Place ID"}},
-            {Name = "ServerHop",     Type = "Button", LayoutOrder = 7,  Data = {"Server Hop"}},
-            {Name = "RejoinServer",  Type = "Button", LayoutOrder = 8,  Data = {"Rejoin Server"}},
-            
-            -- // Player Info
-            {Name = "PlayerName",    Type = "Info",   LayoutOrder = 9,  Data = {""}}, -- filled in dynamically
-            {Name = "UserId",        Type = "Info",   LayoutOrder = 10, Data = {""}}, -- filled in dynamically
-            {Name = "CopyUserId",    Type = "Button", LayoutOrder = 11, Data = {"Copy User ID"}},
-            
-            -- // UI Settings
-           -- {Name = "HideKeybind",   Type = "Keybind",  LayoutOrder = 12, Data = {"Hide UI Keybind", "RightShift"}},
-            {Name = "Notifications", Type = "Bool",     LayoutOrder = 13, Data = {"Notifications", true}},
-]]
