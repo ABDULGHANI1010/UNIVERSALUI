@@ -263,7 +263,9 @@ local PROPERTIES = {
         Values = {}
     };
     ["World"]    = {LayoutOrder = 5, Divider = true, Image = "rbxassetid://124318997479071",
-        Values = {}
+        Values = {
+            { Name = "InfRenderDistance",            Type = "Bool",     LayoutOrder = 1, Data = {"Infinite Render Distance", false}},
+        }
     };
     ["Game"]     = {LayoutOrder = 6, Divider = true, Image = "rbxassetid://115110561340057",
         Values = {}
@@ -2417,6 +2419,41 @@ function AntiKickFeature:onDisable()
     end
 end
 
+-- // Render Distance Feature
+local RenderDistanceFeature = registerFeature("RenderDistance")
+local originalMaxDistance = nil
+local originalDistanceFactor = nil
+
+function RenderDistanceFeature:onEnable()
+    -- // store originals
+    originalMaxDistance    = LocalPlayer.MaximumSimulationRadius
+    originalDistanceFactor = LocalPlayer.SimulationRadius
+    
+    -- // hook to keep it at max every frame
+    self:connect(RunService.Heartbeat, function()
+        LocalPlayer.MaximumSimulationRadius = math.huge
+        LocalPlayer.SimulationRadius        = math.huge
+    end)
+    
+    -- // also set immediately
+    LocalPlayer.MaximumSimulationRadius = math.huge
+    LocalPlayer.SimulationRadius        = math.huge
+    
+    notify("Render Distance: Infinite")
+end
+
+function RenderDistanceFeature:onDisable()
+    -- // restore originals
+    if originalMaxDistance then
+        LocalPlayer.MaximumSimulationRadius = originalMaxDistance
+        originalMaxDistance = nil
+    end
+    if originalDistanceFactor then
+        LocalPlayer.SimulationRadius = originalDistanceFactor
+        originalDistanceFactor = nil
+    end
+end
+
 -- // Property Change Connections (per character)
 local wsConn, jhConn
 
@@ -2455,19 +2492,21 @@ local function characterAdded(char)
     
     -- // Re-apply all toggled features on respawn
     local toggleMap = {
-        { feature = FlyFeature,       value = "FlightToggled"      },
-        { feature = NoclipFeature,    value = "NoclipToggled"      },
-        { feature = InfJumpFeature,   value = "InfJumpToggled"     },
-        { feature = AntiAfkFeature,   value = "AntiAfkToggled"     },
-        { feature = FreezeFeature,    value = "FreezeToggled"      },
-        { feature = WalkSpeedFeature, value = "WalkSpeedToggled"   },
-        { feature = JumpHeightFeature,value = "JumpHeightToggled"  },
-        { feature = GodFeature,       value = "GodToggled"         },
-        { feature = AntiVoidFeature,  value = "AntiVoidToggled"    },
-        { feature = NoFrictionFeature,value = "NoFrictionToggled"  },
-        { feature = SpectateFeature,  value = "SpectateToggled"    },
-        { feature = FreecamFeature,   value = "FreecamToggled"     },
-        { feature = Invisibility,     value = "InvisibilityToggled"}
+        { feature = FlyFeature,             value = "FlightToggled"      },
+        { feature = NoclipFeature,          value = "NoclipToggled"      },
+        { feature = InfJumpFeature,         value = "InfJumpToggled"     },
+        { feature = AntiAfkFeature,         value = "AntiAfkToggled"     },
+        { feature = FreezeFeature,          value = "FreezeToggled"      },
+        { feature = WalkSpeedFeature,       value = "WalkSpeedToggled"   },
+        { feature = JumpHeightFeature,      value = "JumpHeightToggled"  },
+        { feature = GodFeature,             value = "GodToggled"         },
+        { feature = AntiVoidFeature,        value = "AntiVoidToggled"    },
+        { feature = NoFrictionFeature,      value = "NoFrictionToggled"  },
+        { feature = SpectateFeature,        value = "SpectateToggled"    },
+        { feature = FreecamFeature,         value = "FreecamToggled"     },
+        { feature = Invisibility,           value = "InvisibilityToggled"},
+        { feature = RenderDistanceFeature,  value = "InfRenderDistance"  },
+        
     }
     
     for _, entry in ipairs(toggleMap) do
@@ -2499,7 +2538,8 @@ local VALUE_MAP = {
     { value = "SpectateTarget",         feature = SpectateFeature,         method = "onEnable"                                         },
     { value = "FreecamToggled",         feature = FreecamFeature,          method = "toggle",            getVal = "FreecamToggled"     },
     { value = "InvisibilityToggled",    feature = Invisibility,            method = "toggle",            getVal = "InvisibilityToggled"},
-    { value = "AntiKickToggled",        feature = AntiKickFeature,         method = "toggle",            getVal = "AntiKickToggled"}
+    { value = "AntiKickToggled",        feature = AntiKickFeature,         method = "toggle",            getVal = "AntiKickToggled"    },
+    { value = "InfRenderDistance",      feature = RenderDistanceFeature,   method = "toggle",            getVal = "InfRenderDistance"  }
 }
 
 for _, entry in ipairs(VALUE_MAP) do
