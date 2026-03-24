@@ -249,6 +249,9 @@ local PROPERTIES = {
             { Name = "FreecamToggled"               ,Type = "Bool",     LayoutOrder = 39, Data = {"Freecam",             false}         },
             { Name = "FreecamSpeed"                 ,Type = "Slider",   LayoutOrder = 40, Data = {"Freecam Speed",        50, 1, 300, 1} },
             { Name = "FreecamSensitivity"           ,Type = "Slider",   LayoutOrder = 41, Data = {"Freecam Sensitivity",  0.3, 0.1, 2, 0.1} },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 42, Data = {16}},
+            
+            { Name = "InvisibilityToggled"          ,Type = "Bool",     LayoutOrder = 43, Data = {"Invisibility Toggled", false}  },
         }
     };
     ["Combat"]   = {LayoutOrder = 3, Divider = true, Image = "rbxassetid://80768163828428",
@@ -328,9 +331,41 @@ local notificationContainer = nil
 local notificationIndex = 0
 
 local buttonFuncs = { } --> stores button funcs: [index] = func
-local uniqueIdentifier = HttpService:GenerateGUID(false):gsub("-", ""):sub(1, 8)
+local createdIdentifiers = { }
 
+local navbarToggled = true
+local navbarToggleDebounce = false
+local navbarToggleQueue = { }
+
+local attributes = { }
 ---- Helpers -----------------------------------------------------------------------------------------------
+local uniqueIdentifier = function(indx)
+    local id = createdIdentifiers[indx]
+    if id then return id end
+    local str = ""
+    local len = math.random(8, 13)
+    while #str < len do
+        str ..= HttpService:GenerateGUID(false):gsub("%W",""):gsub("%d","")
+    end
+    str = str:sub(1, len)
+    createdIdentifiers[indx] = str
+    return str
+end
+
+local setAttribute = function(instance, attribute, value)
+    if not attributes[instance] then
+        attributes[instance] = {}
+    end
+    attributes[instance][attribute] = value
+end
+
+local getAttribute = function(instance, attribute)
+    if not attributes[instance] then
+        return nil
+    end
+    return attributes[instance][attribute] or nil
+end
+
 local assignProperties = function(instance, properies)
     for k, v in pairs(properies) do
         instance[k] = v
@@ -339,6 +374,7 @@ end
 
 local new = function(instance, properties)
     local new = Instance.new(instance)
+    properties["Archivable"] = false -- guard
     assignProperties(new, properties)
     return new
 end
@@ -419,7 +455,7 @@ end
 
 ---- UI Start ----------------------------------------------------------------------------------------------
 local screenGui = new('ScreenGui', {
-    Name = "UniversalUI"..uniqueIdentifier, 
+    Name = uniqueIdentifier("uiName"), 
     Parent = COREGUI, 
     IgnoreGuiInset = true, 
     ResetOnSpawn = false, 
@@ -503,6 +539,7 @@ local newTab = function(name, data)     --  [Tab] / [Tab] / [Tab] / [Tab] / [Tab
             BackgroundColor3 = COLORS.navDividerColor,
             Parent = frame,
             BorderSizePixel = 0,
+            Name = "Divider"
         })
     end
     return frame
@@ -598,36 +635,30 @@ local newBool = function(name, data)    --  [.Text......................[Switch]
     })
     
     local switchOnAnim = newAnimation({
-        {
-            switch, 
+        {switch, 
             TweenInfo.new(0.3, Enum.EasingStyle.Circular, Enum.EasingDirection.InOut),
             {Position = UDim2.new(1, 0, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.new(1, 2, 1, 2)}
         },
-        {
-            switchContainer,
+        { switchContainer,
             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
             {BackgroundColor3 = COLORS.switchOnBackgroundColor}
         },
-        {
-            switchStroke,
+        {switchStroke,
             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
             {Thickness = 0}
         }
     })
     
     local switchOffAnim = newAnimation({
-        {
-            switch, 
+        {switch, 
             TweenInfo.new(0.3, Enum.EasingStyle.Circular, Enum.EasingDirection.InOut),
             {Position = UDim2.new(0, 0, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, 0, 1, 0)}
         },
-        {
-            switchContainer,
+        {switchContainer,
             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
             {BackgroundColor3 = COLORS.switchOffBackgroundColor}
         },
-        {
-            switchStroke,
+        {switchStroke,
             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
             {Thickness = 1.25}
         }
@@ -1203,10 +1234,70 @@ local function openMenu(menuName)
         end
     end
     
-    selectedNavTab = menuName
-    createdNavTabs[selectedNavTab].Animations.Select.play()
-    createdNavTabs[selectedNavTab].Panel.Visible = true
+    if menuName then
+        selectedNavTab = menuName
+        createdNavTabs[selectedNavTab].Animations.Select.play()
+        createdNavTabs[selectedNavTab].Panel.Visible = true
+    end
 end
+
+local navbarOutAnim = newAnimation({
+    {navBar, 
+        TweenInfo.new(0.3, Enum.EasingStyle.Circular, Enum.EasingDirection.In),
+        {Position = UDim2.new(0.5, 0, 0, -48)}
+    }
+})
+
+local navbarInAnim = newAnimation({
+    {navBar, 
+        TweenInfo.new(0.4, Enum.EasingStyle.Circular, Enum.EasingDirection.Out),
+        {Position = UDim2.new(0.5, 0, 0, 16)}
+    }
+})
+
+
+local function toggleNavbar(visible)
+    if not visible then
+        visible = not navbarToggled
+    end
+    if navbarToggleDebounce and #navbarToggleQueue <= 3 then
+        table.insert(navbarToggleQueue, visible)
+        return
+    end
+    navbarToggleDebounce = true
+    openMenu(nil)
+    
+    if visible then
+        navbarInAnim.play()
+    end
+    
+    for menuName, navTab in createdNavTabs do
+        local navTabData = PROPERTIES[menuName]
+        local navTab = createdNavTabs[menuName]
+        local delay = (navTabData.LayoutOrder - 1)/10
+        task.delay(delay, function()
+            if visible then
+                navTab.Animations.UnShrink.play()
+            else
+                navTab.Animations.Shrink.play()
+            end
+        end)
+    end
+    
+    if not visible then
+        task.wait(0.5)
+        navbarOutAnim.play()
+    end
+    
+    task.delay(0.6, function()
+        navbarToggleDebounce = false
+        if #navbarToggleQueue > 0 then
+            toggleNavbar(table.remove(navbarToggleQueue, 1))
+        end
+    end)
+    navbarToggled = visible
+end
+
 
 ---- Construct ----
 for menuName, menuData in PROPERTIES do
@@ -1219,7 +1310,7 @@ for menuName, menuData in PROPERTIES do
     ---- Menu Animations ----
     local select = newAnimation({
         {navTab,
-            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
             {Size = UDim2.new(0, 100, 1, 0)}
         },
         {navTab.Icon, 
@@ -1247,15 +1338,55 @@ for menuName, menuData in PROPERTIES do
         }  
     })
     
+    local shrink = newAnimation({
+        {navTab,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {Size = UDim2.new(0, 0, 1, 0)}
+        },
+        {navTab.Icon, 
+            TweenInfo.new(.14, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
+            {ImageTransparency = 1}
+        },
+        {navTab.Label, 
+            TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
+            {TextTransparency = 1}
+        },
+        if menuData.Divider then 
+        {navTab.Divider,
+            TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+            {BackgroundTransparency = 1}
+        } else nil,
+    })
+    
+    local unshrink = newAnimation({
+        {navTab,
+            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.new(0, 90, 1, 0)}
+        },
+        {navTab.Icon, 
+            TweenInfo.new(.14, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
+            {ImageTransparency = 0}
+        },
+        {navTab.Label, 
+            TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), 
+            {TextTransparency = 0}
+        },
+        if menuData.Divider then 
+        {navTab.Divider,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+            {BackgroundTransparency = 0}
+        } else nil,
+    })
+    
     local function onMenuClick()
         openMenu(menuName)
     end
     navTab.Activated:Connect(onMenuClick)
     
-    createdNavTabs[menuName] = {NavTab = navTab, Panel = panel, Animations = {Select = select, Deselect = deselect}}
+    createdNavTabs[menuName] = {NavTab = navTab, Panel = panel, Animations = {Select = select, Deselect = deselect, Shrink = shrink, UnShrink = unshrink}}
 end
 
----- Panel Scaling ----
+---- Panel Scaling / Toggle ----
 local function updatePanelSize()
     local screenSize = screenGui.AbsoluteSize
     local maximumYOffset = MAX_PANEL_SIZE_Y.Scale * screenSize.Y + MAX_PANEL_SIZE_Y.Offset + MAX_PANEL_SIZE_Y.Offset
@@ -1271,6 +1402,11 @@ screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updatePanelSize)
 screenGui.DescendantAdded:Connect(updatePanelSize)
 updatePanelSize()
 
+UserInputService.InputBegan:Connect(function(inputObj, gameProcessedEvent)
+    if inputObj.KeyCode == Enum.KeyCode.RightShift then
+        toggleNavbar()
+    end
+end)
 ---- Functionality -----------------------------------------------------------------------------------------
 local character : Model
 local humanoid : Humanoid
@@ -1488,13 +1624,13 @@ function FlyFeature:onEnable()
     bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     bodyVelocity.Velocity = Vector3.zero
-    bodyVelocity.Name = uniqueIdentifier
+    bodyVelocity.Name = uniqueIdentifier("flyBodyVelocity")
     bodyVelocity.Parent = rootPart
     
     bodyGyro = Instance.new("BodyGyro")
     bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bodyGyro.P = 9e3
-    bodyGyro.Name = uniqueIdentifier
+    bodyGyro.Name = uniqueIdentifier("flyBodyGyro")
     bodyGyro.Parent = rootPart
     
     self:connect(RunService.RenderStepped, function()
@@ -1568,7 +1704,7 @@ function FreezeFeature:onEnable()
     if not character then return end
     for _, part in ipairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
-            part:SetAttribute(uniqueIdentifier, part.Anchored)
+            setAttribute(part, "orgnlAnchrVal", part.Anchored)
             part.Anchored = true
         end
     end
@@ -1578,7 +1714,8 @@ function FreezeFeature:onDisable()
     if not character then return end
     for _, part in ipairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Anchored = part:GetAttribute(uniqueIdentifier) or false
+            part.Anchored = getAttribute(part, "orgnlAnchrVal") or false
+            setAttribute(part, "orgnlAnchrVal", nil)
         end
     end
 end
@@ -2023,6 +2160,7 @@ function FreecamFeature:onEnable()
     freecamPart.Transparency  = 1
     freecamPart.Size          = Vector3.one
     freecamPart.CFrame        = camera.CFrame
+    freecamPart.Name          = uniqueIdentifier("freeCamPart")
     freecamPart.Parent        = WorkspaceService
     
     camera.CameraType    = Enum.CameraType.Scriptable
@@ -2181,6 +2319,36 @@ function FreecamFeature:onDisable()
     end
 end
 
+local Invisibility = registerFeature("Invisibility")
+
+function Invisibility:onEnable()
+    if not character then return end
+    
+    self:connect(RunService.RenderStepped, function()
+        for _, part in character:GetDescendants() do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                if part.Name ~= "HumanoidRootPart" then
+                    part.LocalTransparencyModifier = 1
+                end
+            end
+        end
+    end)
+    
+    notify("Invisibility is only client sided")
+end
+
+function Invisibility:onDisable()
+    if not character then return end
+    
+    for _, part in character:GetDescendants() do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            if part.Name ~= "HumanoidRootPart" then
+                part.LocalTransparencyModifier = 0
+            end
+        end
+    end
+end
+
 -- // Property Change Connections (per character)
 local wsConn, jhConn
 
@@ -2219,18 +2387,19 @@ local function characterAdded(char)
     
     -- // Re-apply all toggled features on respawn
     local toggleMap = {
-        { feature = FlyFeature,      value = "FlightToggled"   },
-        { feature = NoclipFeature,   value = "NoclipToggled"   },
-        { feature = InfJumpFeature,  value = "InfJumpToggled"  },
-        { feature = AntiAfkFeature,  value = "AntiAfkToggled"  },
-        { feature = FreezeFeature,   value = "FreezeToggled"   },
-        { feature = WalkSpeedFeature,value = "WalkSpeedToggled"},
-        { feature = JumpHeightFeature,value = "JumpHeightToggled"},
-        { feature = GodFeature,      value = "GodToggled"       },
-        { feature = AntiVoidFeature, value = "AntiVoidToggled" },
-        { feature = NoFrictionFeature,value = "NoFrictionToggled" },
-        { feature = SpectateFeature, value = "SpectateToggled" },
-        { feature = FreecamFeature,  value = "FreecamToggled" }
+        { feature = FlyFeature,       value = "FlightToggled"      },
+        { feature = NoclipFeature,    value = "NoclipToggled"      },
+        { feature = InfJumpFeature,   value = "InfJumpToggled"     },
+        { feature = AntiAfkFeature,   value = "AntiAfkToggled"     },
+        { feature = FreezeFeature,    value = "FreezeToggled"      },
+        { feature = WalkSpeedFeature, value = "WalkSpeedToggled"   },
+        { feature = JumpHeightFeature,value = "JumpHeightToggled"  },
+        { feature = GodFeature,       value = "GodToggled"         },
+        { feature = AntiVoidFeature,  value = "AntiVoidToggled"    },
+        { feature = NoFrictionFeature,value = "NoFrictionToggled"  },
+        { feature = SpectateFeature,  value = "SpectateToggled"    },
+        { feature = FreecamFeature,   value = "FreecamToggled"     },
+        { feature = Invisibility,     value = "InvisibilityToggled"}
     }
     
     for _, entry in ipairs(toggleMap) do
@@ -2243,24 +2412,25 @@ end
 
 -- // Wire Up
 local VALUE_MAP = {
-    { value = "FlightToggled",          feature = FlyFeature,              method = "toggle",            getVal = "FlightToggled"    },
-    { value = "NoclipToggled",          feature = NoclipFeature,           method = "toggle",            getVal = "NoclipToggled"    },
-    { value = "InfJumpToggled",         feature = InfJumpFeature,          method = "toggle",            getVal = "InfJumpToggled"   },
-    { value = "AntiAfkToggled",         feature = AntiAfkFeature,          method = "toggle",            getVal = "AntiAfkToggled"   },
-    { value = "FreezeToggled",          feature = FreezeFeature,           method = "toggle",            getVal = "FreezeToggled"    },
-    { value = "WalkSpeedToggled",       feature = WalkSpeedFeature,        method = "apply"                                          },
-    { value = "WalkSpeed",              feature = WalkSpeedFeature,        method = "apply"                                          },
-    { value = "JumpHeightToggled",      feature = JumpHeightFeature,       method = "apply"                                          },
-    { value = "JumpHeight",             feature = JumpHeightFeature,       method = "apply"                                          },
-    { value = "AutoExecute",            feature = AutoExecFeature,         method = "toggle",            getVal = "AutoExecute"      },
-    { value = "TeleportToPlayerType",   feature = TeleportToPlayerFeature, method = "updateVisibility"                               },
-    { value = "TeleportToPlayerLooped", feature = TeleportToPlayerFeature, method = "updateVisibility"                               },
-    { value = "GodToggled",             feature = GodFeature,              method = "toggle",            getVal = "GodToggled"       },
-    { value = "AntiVoidToggled",        feature = AntiVoidFeature,         method = "toggle",            getVal = "AntiVoidToggled"  },
-    { value = "NoFrictionToggled",      feature = NoFrictionFeature,       method = "toggle",            getVal = "NoFrictionToggled"},
-    { value = "SpectateToggled",        feature = SpectateFeature,         method = "toggle",            getVal = "SpectateToggled"  },
-    { value = "SpectateTarget",         feature = SpectateFeature,         method = "onEnable"                                       },
-    { value = "FreecamToggled",         feature = FreecamFeature,          method = "toggle",            getVal = "FreecamToggled" },
+    { value = "FlightToggled",          feature = FlyFeature,              method = "toggle",            getVal = "FlightToggled"      },
+    { value = "NoclipToggled",          feature = NoclipFeature,           method = "toggle",            getVal = "NoclipToggled"      },
+    { value = "InfJumpToggled",         feature = InfJumpFeature,          method = "toggle",            getVal = "InfJumpToggled"     },
+    { value = "AntiAfkToggled",         feature = AntiAfkFeature,          method = "toggle",            getVal = "AntiAfkToggled"     },
+    { value = "FreezeToggled",          feature = FreezeFeature,           method = "toggle",            getVal = "FreezeToggled"      },
+    { value = "WalkSpeedToggled",       feature = WalkSpeedFeature,        method = "apply"                                            },
+    { value = "WalkSpeed",              feature = WalkSpeedFeature,        method = "apply"                                            },
+    { value = "JumpHeightToggled",      feature = JumpHeightFeature,       method = "apply"                                            },
+    { value = "JumpHeight",             feature = JumpHeightFeature,       method = "apply"                                            },
+    { value = "AutoExecute",            feature = AutoExecFeature,         method = "toggle",            getVal = "AutoExecute"        },
+    { value = "TeleportToPlayerType",   feature = TeleportToPlayerFeature, method = "updateVisibility"                                 },
+    { value = "TeleportToPlayerLooped", feature = TeleportToPlayerFeature, method = "updateVisibility"                                 },
+    { value = "GodToggled",             feature = GodFeature,              method = "toggle",            getVal = "GodToggled"         },
+    { value = "AntiVoidToggled",        feature = AntiVoidFeature,         method = "toggle",            getVal = "AntiVoidToggled"    },
+    { value = "NoFrictionToggled",      feature = NoFrictionFeature,       method = "toggle",            getVal = "NoFrictionToggled"  },
+    { value = "SpectateToggled",        feature = SpectateFeature,         method = "toggle",            getVal = "SpectateToggled"    },
+    { value = "SpectateTarget",         feature = SpectateFeature,         method = "onEnable"                                         },
+    { value = "FreecamToggled",         feature = FreecamFeature,          method = "toggle",            getVal = "FreecamToggled"     },
+    { value = "InvisibilityToggled",    feature = Invisibility,            method = "toggle",            getVal = "InvisibilityToggled"}
 }
 
 for _, entry in ipairs(VALUE_MAP) do
@@ -2303,3 +2473,4 @@ LocalPlayer.CharacterAdded:Connect(characterAdded)
 
 notify("Loaded successfully")
 notify("Check the Home tab for important information", 10)
+notify("Right Shift to Toggle UI", 10)
