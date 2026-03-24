@@ -209,49 +209,51 @@ local PROPERTIES = {
             -- // Noclip and Anit-afk
             {Name = 'NoclipToggled'                 ,Type = 'Bool',     LayoutOrder = 11, Data = {"No-clip Toggled", false}},
             {Name = 'AntiAfkToggled'                ,Type = 'Bool',     LayoutOrder = 12, Data = {"Anti-Afk Toggled", false}},
+            {Name = 'AntiKickToggled'               ,Type = 'Bool',     LayoutOrder = 13, Data = {"Anti-Kick Toggled", false}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 14, Data = {16}},
             
             -- // Teleport
-            {Name = 'TeleportPosition'              ,Type = 'Textbox',  LayoutOrder = 13, Data = {"Teleport Position", "0, 0, 0"}},
-            {Name = 'Teleport'                      ,Type = 'Button',   LayoutOrder = 14, Data = {"Teleport to Position"}},
-            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 15, Data = {16}},
+            {Name = 'TeleportPosition'              ,Type = 'Textbox',  LayoutOrder = 15, Data = {"Teleport Position", "0, 0, 0"}},
+            {Name = 'Teleport'                      ,Type = 'Button',   LayoutOrder = 16, Data = {"Teleport to Position"}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 17, Data = {16}},
             
             -- more
-            {Name = 'TeleportToPlayerType'          ,Type = 'Dropdown', LayoutOrder = 16, Data = {"Teleport to Player type", 1, {"Instant", "Tween", "Pulse", "Loop"}}},
-            {Name = 'TeleportPlayerName'            ,Type = 'Textbox',  LayoutOrder = 17, Data = {"Teleport to Player Name", "@random"}},
-            {Name = 'TeleportToPlayerTweenDuration' ,Type = 'Textbox',  LayoutOrder = 18, Data = {"Tween Duration", ""}},
-            {Name = 'TeleportToPlayerPulseDuration' ,Type = 'Textbox',  LayoutOrder = 19, Data = {"Pulse Duration", ""}},
-            {Name = 'TeleportToPlayerOffset'        ,Type = 'Textbox',  LayoutOrder = 20, Data = {"Player Teleport Offset", "0, 3, 0"}},
-            {Name = 'TeleportToPlayerLooped'        ,Type = 'Bool',     LayoutOrder = 21, Data = {"Loop Teleport to Player", false}},
-            {Name = 'TeleportToPlayer'              ,Type = 'Button',   LayoutOrder = 22, Data = {"Teleport to Player"}},
-            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 23, Data = {16}},
+            {Name = 'TeleportToPlayerType'          ,Type = 'Dropdown', LayoutOrder = 18, Data = {"Teleport to Player type", 1, {"Instant", "Tween", "Pulse", "Loop"}}},
+            {Name = 'TeleportPlayerName'            ,Type = 'Textbox',  LayoutOrder = 19, Data = {"Teleport to Player Name", "@random"}},
+            {Name = 'TeleportToPlayerTweenDuration' ,Type = 'Textbox',  LayoutOrder = 20, Data = {"Tween Duration", ""}},
+            {Name = 'TeleportToPlayerPulseDuration' ,Type = 'Textbox',  LayoutOrder = 21, Data = {"Pulse Duration", ""}},
+            {Name = 'TeleportToPlayerOffset'        ,Type = 'Textbox',  LayoutOrder = 22, Data = {"Player Teleport Offset", "0, 3, 0"}},
+            {Name = 'TeleportToPlayerLooped'        ,Type = 'Bool',     LayoutOrder = 23, Data = {"Loop Teleport to Player", false}},
+            {Name = 'TeleportToPlayer'              ,Type = 'Button',   LayoutOrder = 24, Data = {"Teleport to Player"}},
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 25, Data = {16}},
             
             --// Character
-            {Name = 'Sit'                           ,Type = 'Button',   LayoutOrder = 24, Data = {"Sit"}},
-            {Name = 'Trip'                          ,Type = 'Button',   LayoutOrder = 25, Data = {"Trip"}},
-            {Name = 'FreezeToggled'                 ,Type = 'Bool',     LayoutOrder = 26, Data = {"Freeze Character Toggled", false}},
-            {Name = "GodToggled"                    ,Type = "Bool",     LayoutOrder = 27, Data = {"God Mode", false} },
-            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 28, Data = {16}},
+            {Name = 'Sit'                           ,Type = 'Button',   LayoutOrder = 26, Data = {"Sit"}},
+            {Name = 'Trip'                          ,Type = 'Button',   LayoutOrder = 27, Data = {"Trip"}},
+            {Name = 'FreezeToggled'                 ,Type = 'Bool',     LayoutOrder = 28, Data = {"Freeze Character Toggled", false}},
+            {Name = "GodToggled"                    ,Type = "Bool",     LayoutOrder = 29, Data = {"God Mode", false} },
+            {Name = 'Space'                         ,Type = 'Spacing',  LayoutOrder = 30, Data = {16}},
             
             --// Void
-            { Name = "AntiVoidToggled"              ,Type = "Bool",     LayoutOrder = 29, Data = {"Anti-Void", false} },
-            { Name = "AntiVoidThreshold"            ,Type = "Slider",   LayoutOrder = 30, Data = {"Void Threshold", 50, 0, 500, 10} },
-            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 31, Data = {16}},
-            
-            { Name = "NoFrictionToggled"            ,Type = "Bool",     LayoutOrder = 32, Data = {"Less Friction (near 0 friction)", false} },
+            { Name = "AntiVoidToggled"              ,Type = "Bool",     LayoutOrder = 31, Data = {"Anti-Void", false} },
+            { Name = "AntiVoidThreshold"            ,Type = "Slider",   LayoutOrder = 32, Data = {"Void Threshold", 50, 0, 500, 10} },
             { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 33, Data = {16}},
             
-            { Name = "SpectateToggled"              ,Type = "Bool",     LayoutOrder = 34, Data = {"Spectate", false}              },
-            { Name = "SpectateTarget"               ,Type = "Textbox",  LayoutOrder = 35, Data = {"Spectate Target", "@closest"}  },
-            { Name = "SpectateNext"                 ,Type = "Button",   LayoutOrder = 36, Data = {"Next Player"}                  },
-            { Name = "SpectatePrev"                 ,Type = "Button",   LayoutOrder = 37, Data = {"Previous Player"}              },
-            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 38, Data = {16}},
+            { Name = "NoFrictionToggled"            ,Type = "Bool",     LayoutOrder = 34, Data = {"Less Friction (near 0 friction)", false} },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 35, Data = {16}},
             
-            { Name = "FreecamToggled"               ,Type = "Bool",     LayoutOrder = 39, Data = {"Freecam",             false}         },
-            { Name = "FreecamSpeed"                 ,Type = "Slider",   LayoutOrder = 40, Data = {"Freecam Speed",        50, 1, 300, 1} },
-            { Name = "FreecamSensitivity"           ,Type = "Slider",   LayoutOrder = 41, Data = {"Freecam Sensitivity",  0.3, 0.1, 2, 0.1} },
-            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 42, Data = {16}},
+            { Name = "SpectateToggled"              ,Type = "Bool",     LayoutOrder = 36, Data = {"Spectate", false}              },
+            { Name = "SpectateTarget"               ,Type = "Textbox",  LayoutOrder = 37, Data = {"Spectate Target", "@closest"}  },
+            { Name = "SpectateNext"                 ,Type = "Button",   LayoutOrder = 38, Data = {"Next Player"}                  },
+            { Name = "SpectatePrev"                 ,Type = "Button",   LayoutOrder = 39, Data = {"Previous Player"}              },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 40, Data = {16}},
             
-            { Name = "InvisibilityToggled"          ,Type = "Bool",     LayoutOrder = 43, Data = {"Invisibility Toggled", false}  },
+            { Name = "FreecamToggled"               ,Type = "Bool",     LayoutOrder = 41, Data = {"Freecam",             false}         },
+            { Name = "FreecamSpeed"                 ,Type = "Slider",   LayoutOrder = 42, Data = {"Freecam Speed",        50, 1, 300, 1} },
+            { Name = "FreecamSensitivity"           ,Type = "Slider",   LayoutOrder = 43, Data = {"Freecam Sensitivity",  0.3, 0.1, 2, 0.1} },
+            { Name = 'Space'                        ,Type = 'Spacing',  LayoutOrder = 44, Data = {16}},
+            
+            { Name = "InvisibilityToggled"          ,Type = "Bool",     LayoutOrder = 45, Data = {"Invisibility Toggled", false}  },
         }
     };
     ["Combat"]   = {LayoutOrder = 3, Divider = true, Image = "rbxassetid://80768163828428",
@@ -2349,6 +2351,72 @@ function Invisibility:onDisable()
     end
 end
 
+-- // Anti Kick Feature
+local AntiKickFeature = registerFeature("AntiKick")
+local oldKick = nil
+local oldNamecall = nil
+
+function AntiKickFeature:onEnable()
+    
+    -- // hook Kick function directly
+    if hookfunction then
+        oldKick = hookfunction(LocalPlayer.Kick, newcclosure(function(self, ...)
+            if self == LocalPlayer then
+                notify("Anti-Kick: Kick blocked")
+                return
+            end
+            return oldKick(self, ...)
+        end))
+    end
+    
+    -- // hook namecall to catch remote kick calls
+    if hookmetamethod then
+        oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            
+            if self == LocalPlayer then
+                if method == "Kick"
+                    or method == "Destroy"
+                    or method == "Remove"
+                then
+                    notify("Anti-Kick: " .. method .. " blocked")
+                    return
+                end
+            end
+            
+            if self == game and method == "Shutdown" then
+                notify("Anti-Kick: Shutdown blocked")
+                return
+            end
+            
+            return oldNamecall(self, ...)
+        end))
+    end
+    
+    -- // catch character removal softbans
+    self:connect(LocalPlayer.CharacterRemoving, function()
+        if not ignoringCharacterAdded then
+            task.defer(function()
+                if not LocalPlayer.Character then
+                    LocalPlayer:LoadCharacter()
+                end
+            end)
+        end
+    end)
+end
+
+function AntiKickFeature:onDisable()
+    -- // restore original functions
+    if oldKick and hookfunction then
+        hookfunction(LocalPlayer.Kick, oldKick)
+        oldKick = nil
+    end
+    if oldNamecall and hookmetamethod then
+        hookmetamethod(game, "__namecall", oldNamecall)
+        oldNamecall = nil
+    end
+end
+
 -- // Property Change Connections (per character)
 local wsConn, jhConn
 
@@ -2430,7 +2498,8 @@ local VALUE_MAP = {
     { value = "SpectateToggled",        feature = SpectateFeature,         method = "toggle",            getVal = "SpectateToggled"    },
     { value = "SpectateTarget",         feature = SpectateFeature,         method = "onEnable"                                         },
     { value = "FreecamToggled",         feature = FreecamFeature,          method = "toggle",            getVal = "FreecamToggled"     },
-    { value = "InvisibilityToggled",    feature = Invisibility,            method = "toggle",            getVal = "InvisibilityToggled"}
+    { value = "InvisibilityToggled",    feature = Invisibility,            method = "toggle",            getVal = "InvisibilityToggled"},
+    { value = "AntiKickToggled",        feature = AntiKickFeature,         method = "toggle",            getVal = "AntiKickToggled"}
 }
 
 for _, entry in ipairs(VALUE_MAP) do
